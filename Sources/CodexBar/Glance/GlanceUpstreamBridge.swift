@@ -56,7 +56,12 @@ final class GlanceController: StatusItemControlling {
         self.memoryRelief.start()
         let actions = GlanceActions(
             refresh: { [weak legacy] in legacy?.refreshNow() },
-            openSettings: { [weak self] in self?.settingsOpenHandler?(nil) },
+            // Glance panels never activate the app (the old NSMenu did implicitly). Without activation, Stage
+            // Manager files the settings window into its side strip instead of bringing it forward.
+            openSettings: { [weak self] in
+                NSApp.activate()
+                self?.settingsOpenHandler?(nil)
+            },
             quit: { NSApp.terminate(nil) })
         self.notch = NotchPanelController(feed: self.feed, actions: actions)
         self.menuBar = MenuBarGlanceController(feed: self.feed, actions: actions)

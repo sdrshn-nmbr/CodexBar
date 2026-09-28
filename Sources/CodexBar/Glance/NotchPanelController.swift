@@ -48,13 +48,6 @@ struct NotchShape: Shape {
     }
 }
 
-private struct NotchSizeKey: PreferenceKey {
-    static let defaultValue: CGSize = .zero
-    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
-        value = nextValue()
-    }
-}
-
 struct NotchRootView: View {
     let feed: GlanceFeed
     let state: NotchState
@@ -85,17 +78,17 @@ struct NotchRootView: View {
                 NotchShape(bottomRadius: expanded ? 24 : 10, flare: NotchState.flare)
                     .fill(GlanceStyle.ink)
                     .shadow(color: .black.opacity(expanded ? 0.45 : 0), radius: 18, y: 8))
-            .background(GeometryReader { proxy in
-                Color.clear.preference(key: NotchSizeKey.self, value: proxy.size)
-            })
+            // The hover hit area follows the drawn body, including mid-animation sizes.
+            .onGeometryChange(for: CGSize.self) { proxy in
+                proxy.size
+            } action: { size in
+                self.state.visibleSize = size
+            }
             .clipped()
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .animation(GlanceStyle.expand, value: expanded)
-        .onPreferenceChange(NotchSizeKey.self) { size in
-            self.state.visibleSize = size
-        }
         .environment(\.colorScheme, .dark)
     }
 }
@@ -134,7 +127,11 @@ final class NotchPanelController {
     private let state = NotchState()
     private var panel: GlancePanel?
     private var monitors: [Any] = []
-    private var collapseWorkItem: DispatchWorkItem?
+    /// While expanded the panel receives the pointer, so AppKit stops delivering move events to the global monitor.
+    /// Collapse is decided by sampling the pointer instead.
+    private var hoverWatchTask: Task<Void, Never>?
+    private static let hoverSampleInterval: Duration = .milliseconds(100)
+    private static let collapseGrace: TimeInterval = 0.3
     private let logger = CodexBarLog.logger(LogCategories.app)
 
     private static let panelContentHeight: CGFloat = 320
@@ -170,6 +167,8 @@ final class NotchPanelController {
     }
 
     func hide() {
+        self.hoverWatchTask?.cancel()
+        self.hoverWatchTask = nil
         self.removeMonitors()
         self.panel?.orderOut(nil)
         self.panel = nil
@@ -177,7 +176,8 @@ final class NotchPanelController {
     }
 
     func toggle() {
-        self.setExpanded(!self.state.isExpanded)
+        // Opened from the keyboard: stay open until the pointer has visited the card once.
+        self.setExpanded(!self.state.isExpanded, armedByPointer: false)
     }
 
     private func makePanel(frame: NSRect) -> GlancePanel {
@@ -188,39 +188,58 @@ final class NotchPanelController {
         return panel
     }
 
-    private func setExpanded(_ expanded: Bool) {
+    private func setExpanded(_ expanded: Bool, armedByPointer: Bool = true) {
         guard self.state.isExpanded != expanded else { return }
-        self.collapseWorkItem?.cancel()
         self.state.isExpanded = expanded
         self.panel?.ignoresMouseEvents = !expanded
+        if expanded {
+            self.startHoverWatch(armed: armedByPointer)
+        } else {
+            self.hoverWatchTask?.cancel()
+            self.hoverWatchTask = nil
+        }
     }
 
     /// Screen rect currently drawn by the notch body, in global coordinates.
     private func activeRect() -> NSRect? {
         guard let panel else { return nil }
         let frame = panel.frame
-        let size = self.state.visibleSize == .zero
-            ? CGSize(width: self.state.collapsedWidth + NotchState.flare * 2, height: self.state.notchHeight)
-            : self.state.visibleSize
+        let collapsed = CGSize(width: self.state.collapsedWidth + NotchState.flare * 2, height: self.state.notchHeight)
+        let size = CGSize(
+            width: max(collapsed.width, self.state.visibleSize.width),
+            height: max(collapsed.height, self.state.visibleSize.height))
         let rect = NSRect(x: frame.midX - size.width / 2, y: frame.maxY - size.height, width: size.width, height: size.height)
-        return rect.insetBy(dx: -4, dy: -4)
+        return rect.insetBy(dx: -8, dy: -8)
     }
 
+    /// Expansion comes from the global move monitor (the collapsed panel ignores the mouse).
     private func handleMouse(at point: NSPoint) {
-        guard let rect = self.activeRect() else { return }
-        if rect.contains(point) {
-            self.collapseWorkItem?.cancel()
-            self.collapseWorkItem = nil
-            self.setExpanded(true)
-        } else if self.state.isExpanded, self.collapseWorkItem == nil {
-            let work = DispatchWorkItem { [weak self] in
-                MainActor.assumeIsolated {
-                    self?.collapseWorkItem = nil
-                    self?.setExpanded(false)
+        guard !self.state.isExpanded, let rect = self.activeRect(), rect.contains(point) else { return }
+        self.setExpanded(true)
+    }
+
+    private func startHoverWatch(armed: Bool) {
+        self.hoverWatchTask?.cancel()
+        self.hoverWatchTask = Task { @MainActor [weak self] in
+            var armed = armed
+            var outsideSince: Date?
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.hoverSampleInterval)
+                guard let self, self.state.isExpanded, let rect = self.activeRect() else { return }
+                if rect.contains(NSEvent.mouseLocation) {
+                    armed = true
+                    outsideSince = nil
+                } else if !armed {
+                    continue
+                } else if let since = outsideSince {
+                    if Date().timeIntervalSince(since) >= Self.collapseGrace {
+                        self.setExpanded(false)
+                        return
+                    }
+                } else {
+                    outsideSince = Date()
                 }
             }
-            self.collapseWorkItem = work
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: work)
         }
     }
 
