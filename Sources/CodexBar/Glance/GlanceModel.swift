@@ -111,12 +111,21 @@ struct GlanceProvider: Equatable, Identifiable {
     let name: String
     let lanes: [GlanceLane]
     let freshness: GlanceFreshness
+    /// How old the numbers are, shown quietly once they are no longer just-fetched ("12m ago").
+    var ageText: String?
 
     /// Lanes are ordered shortest window first; lanes sharing a window length get a qualifier from their title.
-    init(provider: UsageProvider, name: String, lanes: [GlanceLane], freshness: GlanceFreshness) {
+    init(
+        provider: UsageProvider,
+        name: String,
+        lanes: [GlanceLane],
+        freshness: GlanceFreshness,
+        ageText: String? = nil)
+    {
         self.provider = provider
         self.name = name
         self.freshness = freshness
+        self.ageText = ageText
         let ordered = lanes.enumerated().sorted { lhs, rhs in
             let left = lhs.element.windowMinutes ?? .max
             let right = rhs.element.windowMinutes ?? .max
