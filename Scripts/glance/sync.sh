@@ -17,6 +17,9 @@ FORK_URL="https://github.com/sdrshn-nmbr/CodexBar.git"
 UPSTREAM_URL="https://github.com/steipete/CodexBar.git"
 BRANCH="glance"
 CLI_LINK="$HOME/.local/bin/codexbar"
+# Stable local identity: macOS keys privacy grants and Keychain access to it, so they survive updates.
+# Ad-hoc signatures change every build and make macOS re-ask after each install.
+SIGN_IDENTITY="${GLANCE_SIGN_IDENTITY:-CodexBar Glance Local Signing}"
 
 mkdir -p "$GLANCE_HOME"
 
@@ -75,6 +78,17 @@ swift build --product CodexBar >"$GLANCE_HOME/last-build.log" 2>&1 || fail "buil
 swift test --filter GlanceModelTests >"$GLANCE_HOME/last-test.log" 2>&1 || fail "glance tests failed (see last-test.log)"
 ./Scripts/package_app.sh release >"$GLANCE_HOME/last-package.log" 2>&1 || fail "packaging failed (see last-package.log)"
 
+if security find-identity -p codesigning -v | grep -q "\"$SIGN_IDENTITY\""; then
+  log "signing with $SIGN_IDENTITY"
+  codesign --force --deep --sign "$SIGN_IDENTITY" --preserve-metadata=entitlements,flags,runtime \
+    --timestamp=none "$SRC/CodexBar.app" >"$GLANCE_HOME/last-sign.log" 2>&1 \
+    || fail "signing failed (see last-sign.log)"
+  codesign --verify --deep --strict "$SRC/CodexBar.app" >>"$GLANCE_HOME/last-sign.log" 2>&1 \
+    || fail "signature check failed (see last-sign.log)"
+else
+  log "WARNING: signing identity '$SIGN_IDENTITY' not found; installing ad-hoc build"
+fi
+
 log "installing to $APP_DEST"
 rm -rf "$GLANCE_HOME/previous"
 if [[ -d "$APP_DEST" ]]; then
@@ -109,4 +123,3 @@ cp "$SRC/Scripts/glance/sync.sh" "$GLANCE_HOME/bin/sync.sh" 2>/dev/null || true
 version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_DEST/Contents/Info.plist")
 log "installed CodexBar $version (glance $(git rev-parse --short HEAD))"
 notify "Updated to CodexBar $version"
-

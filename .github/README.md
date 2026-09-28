@@ -46,11 +46,14 @@ Needs macOS 14+ and Xcode with Swift 6.2 or newer.
 brew uninstall --cask codexbar   # if you have it; otherwise brew upgrade overwrites the fork
 git clone -b glance https://github.com/sdrshn-nmbr/CodexBar.git
 cd CodexBar
+./Scripts/glance/make-signing-identity.sh   # once; asks for your Mac password
 ./Scripts/glance/install-agent.sh
 launchctl kickstart gui/$(id -u)/com.sdrshn.codexbar-glance-sync
 ```
 
-The first run clones a separate copy into `~/Library/Application Support/CodexBarGlance/src`, builds it, and installs `/Applications/CodexBar.app`. A clean build takes about 15 minutes; later updates take a few. Open the app when it's done. It keeps your existing CodexBar settings.
+The signing script makes a local certificate so every build has the same signature. Without it, macOS treats each update as a new app and asks for permissions again.
+
+The first run clones a separate copy into `~/Library/Application Support/CodexBarGlance/src`, builds it, signs it, and installs `/Applications/CodexBar.app`. A clean build takes about 15 minutes; later updates take a few. Open the app when it's done. It keeps your existing CodexBar settings.
 
 ## Updates
 
@@ -58,7 +61,7 @@ A LaunchAgent runs [`Scripts/glance/sync.sh`](../Scripts/glance/sync.sh) at 9:30
 
 1. Rebases the `glance` branch onto upstream `main`.
 2. Builds and runs the glance tests.
-3. Packages the app and swaps it into `/Applications`.
+3. Packages the app, signs it with the local certificate, and swaps it into `/Applications`.
 4. Pushes the rebased branch to this fork.
 
 If any step fails, you keep the app you have and get a notification. Logs are in `~/Library/Application Support/CodexBarGlance/`. To update right now:
@@ -71,7 +74,8 @@ If you work in your own clone, run `git pull --rebase` after a sync, since the b
 
 ## Known limits
 
-- Builds are ad-hoc signed. macOS treats each update as a new app, so it may ask again for Keychain access and for access to other apps' data.
+- Builds use a local certificate, not an Apple Developer ID, so the app runs only on Macs that trust that certificate. That's fine for your own machines; sharing builds with others would need a Developer ID.
+- If Claude's numbers never update, set its source to CLI in Settings. When Claude Code's Keychain entry only holds MCP logins, CodexBar's automatic mode keeps showing the last saved numbers; the glance marks those with their age.
 - Settings section headings still use the stock macOS style. Restyling them means editing every Settings page, which would make upstream rebases conflict.
 
 ## Credits
