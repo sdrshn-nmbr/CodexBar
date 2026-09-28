@@ -94,36 +94,3 @@ struct GlanceSnapshot: Equatable {
         self.providers.map(\.severity).max() ?? .calm
     }
 }
-
-extension GlanceProvider {
-    init(model: UsageMenuCardView.Model) {
-        let lanes = model.metrics.map { metric in
-            GlanceLane(
-                id: metric.id,
-                title: metric.title,
-                percent: metric.percent,
-                showsUsed: metric.percentStyle == .used,
-                pacePercent: metric.pacePercent,
-                resetText: metric.resetText)
-        }
-        // A source error with fresh fallback data is a settings concern, not a glance concern.
-        let freshness: GlanceFreshness = if let lastKnown = model.lastKnownUsageText {
-            .stale(lastKnown)
-        } else if lanes.isEmpty {
-            model.subtitleStyle == .loading ? .refreshing : .problem(model.placeholder ?? model.subtitleText)
-        } else {
-            .live
-        }
-        self.init(provider: model.provider, name: model.providerName, lanes: lanes, freshness: freshness)
-    }
-}
-
-extension UsageStore {
-    /// Projects the same menu-card models CodexBar renders, so glance numbers never diverge from the full app.
-    func glanceSnapshot(now: Date = Date()) -> GlanceSnapshot {
-        let providers = self.enabledFirstPartyProvidersForDisplay().map { provider in
-            GlanceProvider(model: self.menuCardModel(for: provider, context: .menu, now: now))
-        }
-        return GlanceSnapshot(providers: providers)
-    }
-}

@@ -10,13 +10,14 @@ final class GlanceFeed {
     private(set) var snapshot: GlanceSnapshot = .empty
     private(set) var revision = 0
 
-    @ObservationIgnored private let store: UsageStore
+    @ObservationIgnored private let source: @MainActor () -> GlanceSnapshot
     @ObservationIgnored private var rebuildScheduled = false
     @ObservationIgnored private var clockTask: Task<Void, Never>?
     @ObservationIgnored private let logger = CodexBarLog.logger(LogCategories.app)
 
-    init(store: UsageStore) {
-        self.store = store
+    /// `source` must read only observable state; any read it performs becomes a rebuild trigger.
+    init(source: @escaping @MainActor () -> GlanceSnapshot) {
+        self.source = source
         self.rebuild()
         self.startMinuteClock()
     }
@@ -28,7 +29,7 @@ final class GlanceFeed {
 
     private func rebuild() {
         let next = withObservationTracking {
-            self.store.glanceSnapshot(now: Date())
+            self.source()
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 self?.scheduleRebuild()
@@ -67,4 +68,3 @@ final class GlanceFeed {
         self.logger.debug("Glance minute clock started")
     }
 }
-
