@@ -85,6 +85,7 @@ struct GlancePercent: View {
 
 struct GlanceProviderRow: View {
     let provider: GlanceProvider
+    var labelWidth: CGFloat = Self.labelWidth
 
     /// Fixed columns so labels, numbers, bars, and reset times line up across every provider.
     static let labelWidth: CGFloat = 22
@@ -106,6 +107,12 @@ struct GlanceProviderRow: View {
                         .font(GlanceStyle.label(10))
                         .foregroundStyle(GlanceStyle.amber.opacity(0.85))
                         .lineLimit(1)
+                } else if let ageText = self.provider.ageText {
+                    Spacer(minLength: 8)
+                    Text(ageText)
+                        .font(GlanceStyle.label(10))
+                        .foregroundStyle(GlanceStyle.faint)
+                        .lineLimit(1)
                 }
             }
             if self.provider.lanes.isEmpty {
@@ -116,7 +123,7 @@ struct GlanceProviderRow: View {
             } else {
                 VStack(spacing: 9) {
                     ForEach(self.provider.lanes) { lane in
-                        GlanceLaneRow(lane: lane)
+                        GlanceLaneRow(lane: lane, labelWidth: self.labelWidth)
                     }
                 }
                 .opacity(self.provider.isStale ? 0.45 : 1)
@@ -136,6 +143,7 @@ struct GlanceProviderRow: View {
 /// One quota window: window length, remaining percent, bar with pace tick, time until reset.
 struct GlanceLaneRow: View {
     let lane: GlanceLane
+    var labelWidth: CGFloat = GlanceProviderRow.labelWidth
 
     var body: some View {
         let severity = GlanceSeverity(lane: self.lane)
@@ -144,7 +152,7 @@ struct GlanceLaneRow: View {
                 .font(GlanceStyle.numerals(11))
                 .foregroundStyle(GlanceStyle.faint)
                 .lineLimit(1)
-                .frame(width: GlanceProviderRow.labelWidth, alignment: .leading)
+                .frame(width: self.labelWidth, alignment: .leading)
             GlancePercent(value: self.lane.remaining, size: 20, color: GlanceStyle.tint(severity))
                 .frame(width: GlanceProviderRow.valueWidth, alignment: .leading)
             GlanceBar(lane: self.lane, severity: severity)
@@ -166,6 +174,12 @@ struct GlanceCard: View {
     let snapshot: GlanceSnapshot
     let actions: GlanceActions
 
+    /// One label column for the whole card, wide enough for its longest label ("7d fable"), so rows stay aligned.
+    private var labelWidth: CGFloat {
+        let longest = self.snapshot.providers.flatMap(\.lanes).map(\.label.count).max() ?? 0
+        return max(GlanceProviderRow.labelWidth, CGFloat(longest) * 7 + 2)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if self.snapshot.providers.isEmpty {
@@ -178,7 +192,7 @@ struct GlanceCard: View {
                 if index > 0 {
                     Rectangle().fill(GlanceStyle.hairline).frame(height: 1).padding(.vertical, 12)
                 }
-                GlanceProviderRow(provider: provider)
+                GlanceProviderRow(provider: provider, labelWidth: self.labelWidth)
             }
             HStack(spacing: 14) {
                 Spacer()
