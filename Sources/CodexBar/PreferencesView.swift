@@ -176,7 +176,7 @@ struct PreferencesView: View {
                 onSelectAbout: { self.selection.requestAboutRoot() })
                 .frame(width: self.clampedSidebarWidth)
                 .background {
-                    SettingsSidebarMaterial()
+                    GlanceSettingsBacking { SettingsSidebarMaterial() }
                         .ignoresSafeArea()
                 }
 
@@ -195,7 +195,7 @@ struct PreferencesView: View {
                 // detail-side titlebar region has a stable backing in every pane and appearance. The
                 // zero-sized reader reports the window's titlebar height so the cover below matches it.
                 .background {
-                    SettingsDetailMaterial()
+                    GlanceSettingsBacking { SettingsDetailMaterial() }
                         .ignoresSafeArea()
                         .overlay {
                             SettingsTitlebarInsetReader(inset: self.$detailTitlebarInset)
@@ -206,7 +206,7 @@ struct PreferencesView: View {
                 // below it — matching the sidebar's clean top edge instead of riding up over the window
                 // title. The window draws its title above this cover.
                 .overlay(alignment: .top) {
-                    SettingsDetailTitlebarCoverMaterial()
+                    GlanceSettingsBacking { SettingsDetailTitlebarCoverMaterial() }
                         .frame(height: self.detailTitlebarInset)
                         .frame(maxWidth: .infinity)
                         .ignoresSafeArea(edges: .top)
