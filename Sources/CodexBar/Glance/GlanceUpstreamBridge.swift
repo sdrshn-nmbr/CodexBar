@@ -11,6 +11,7 @@ import CodexBarCore
 final class GlanceController: StatusItemControlling {
     let legacy: StatusItemController
     private let feed: GlanceFeed
+    private let memoryRelief = GlanceMemoryRelief()
     private var notch: NotchPanelController!
     private var menuBar: MenuBarGlanceController!
     private var settingsOpenHandler: (@MainActor (SettingsPane?) -> Void)?
@@ -44,6 +45,8 @@ final class GlanceController: StatusItemControlling {
         self.legacy = legacy
         GlanceFonts.registerIfNeeded()
         self.feed = GlanceFeed(source: { [weak store] in store?.glanceSnapshot() ?? .empty })
+        self.feed.onStoreActivity = { [memoryRelief] in memoryRelief.noteActivity() }
+        self.memoryRelief.start()
         let actions = GlanceActions(
             refresh: { [weak legacy] in legacy?.refreshNow() },
             openSettings: { [weak self] in self?.settingsOpenHandler?(nil) },
@@ -108,6 +111,7 @@ final class GlanceController: StatusItemControlling {
             NotificationCenter.default.removeObserver(screenObserver)
         }
         self.feed.stop()
+        self.memoryRelief.stop()
         self.notch.hide()
         self.menuBar.hide()
         self.legacy.prepareForAppShutdown()
