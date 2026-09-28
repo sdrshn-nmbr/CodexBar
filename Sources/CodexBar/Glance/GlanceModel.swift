@@ -136,6 +136,11 @@ struct GlanceProvider: Equatable, Identifiable {
 
     var id: String { self.provider.rawValue }
 
+    var isStale: Bool {
+        if case .stale = self.freshness { return true }
+        return false
+    }
+
     /// The lane closest to running out decides what the glance shows.
     var binding: GlanceLane? {
         self.lanes.min { $0.remaining < $1.remaining }
