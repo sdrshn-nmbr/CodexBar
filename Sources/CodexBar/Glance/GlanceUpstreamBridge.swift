@@ -149,17 +149,31 @@ final class GlanceController: StatusItemControlling {
 // MARK: - Upstream projection
 
 extension GlanceProvider {
-    init(model: UsageMenuCardView.Model, snapshot: UsageSnapshot?) {
+    /// Older than this, numbers are shown as stale. Covers a missed refresh plus Claude's 15-minute CLI reuse.
+    static let staleAfter: TimeInterval = 30 * 60
+
+    init(model: UsageMenuCardView.Model, snapshot: UsageSnapshot?, now: Date) {
         let lanes = model.metrics.map { GlanceLane(metric: $0, snapshot: snapshot) }
-        // A source error with fresh fallback data is a settings concern, not a glance concern.
-        let freshness: GlanceFreshness = if let lastKnown = model.lastKnownUsageText {
-            .stale(lastKnown)
-        } else if lanes.isEmpty {
+        let age = snapshot.map { now.timeIntervalSince($0.updatedAt) }
+        // Upstream keeps showing the last captured numbers when every source fails. The glance must never pass
+        // those off as live, so anything past `staleAfter` is labeled with its age.
+        let freshness: GlanceFreshness = if lanes.isEmpty {
             model.subtitleStyle == .loading ? .refreshing : .problem(model.placeholder ?? model.subtitleText)
+        } else if let age, age > Self.staleAfter {
+            .stale(Self.ageText(age))
+        } else if let lastKnown = model.lastKnownUsageText {
+            .stale(lastKnown)
         } else {
             .live
         }
         self.init(provider: model.provider, name: model.providerName, lanes: lanes, freshness: freshness)
+    }
+
+    static func ageText(_ age: TimeInterval) -> String {
+        let minutes = Int(age / 60)
+        if minutes < 60 { return "\(minutes)m ago" }
+        if minutes < 48 * 60 { return "\(minutes / 60)h ago" }
+        return "\(minutes / 1440)d ago"
     }
 }
 
@@ -169,7 +183,8 @@ extension UsageStore {
         let providers = self.enabledFirstPartyProvidersForDisplay().map { provider in
             GlanceProvider(
                 model: self.menuCardModel(for: provider, context: .menu, now: now),
-                snapshot: self.presentationSnapshot(for: provider))
+                snapshot: self.presentationSnapshot(for: provider),
+                now: now)
         }
         return GlanceSnapshot(providers: providers)
     }
