@@ -116,7 +116,10 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
             codexAccountPromotionCoordinator: codexAccountPromotionCoordinator)
     }
 
-    static let defaultFactory: Factory = StatusItemController.makeDefaultController
+    static let defaultFactory: Factory = GlanceController.makeController
+
+    /// Set by the glance presentation, which renders its own surfaces and keeps this controller for behavior only.
+    static var hidesStatusItems = false
 
     static var factory: Factory = StatusItemController.defaultFactory
 
@@ -772,6 +775,14 @@ final class StatusItemController: NSObject, NSMenuDelegate, StatusItemControllin
         #if DEBUG
         guard !self.isReleasedForTesting else { return }
         #endif
+        if Self.hidesStatusItems {
+            self.setStatusItemVisiblePreservingPlacement(self.statusItem, false)
+            for provider in Array(self.statusItems.keys) {
+                self.removeProviderStatusItem(for: provider)
+            }
+            self.expectedVisibleStatusItemAutosaveNames = []
+            return
+        }
         let anyEnabled = !self.store.enabledProvidersForDisplay().isEmpty
         let force = self.store.debugForceAnimation
         let mergeIcons = self.shouldMergeIcons

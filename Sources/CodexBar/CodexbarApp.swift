@@ -723,7 +723,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.openSettings(pane: pane)
             }
             self.statusController = statusController
-            if let concreteStatusController = statusController as? StatusItemController {
+            let concreteController = statusController as? StatusItemController
+                ?? (statusController as? GlanceController)?.legacy
+            if let concreteStatusController = concreteController {
                 concreteStatusController.cloudSyncState = self.cloudSyncState
                 MenuSwitchFlickerProbe.startIfRequested(controller: concreteStatusController)
             }
