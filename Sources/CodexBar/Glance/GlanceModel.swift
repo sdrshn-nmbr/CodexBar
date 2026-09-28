@@ -9,13 +9,38 @@ struct GlanceLane: Equatable, Identifiable {
     let remaining: Double
     let expectedRemaining: Double?
     let resetText: String?
+    /// Length of the quota window; lanes are labeled and ordered by it so every provider reads the same way.
+    let windowMinutes: Int?
+    /// Distinguishes lanes that share a window length, e.g. a model-scoped weekly limit.
+    var qualifier: String?
 
-    init(id: String, title: String, percent: Double, showsUsed: Bool, pacePercent: Double?, resetText: String?) {
+    init(
+        id: String,
+        title: String,
+        percent: Double,
+        showsUsed: Bool,
+        pacePercent: Double?,
+        resetText: String?,
+        windowMinutes: Int? = nil)
+    {
         self.id = id
         self.title = title
         self.remaining = Self.clamp(showsUsed ? 100 - percent : percent)
         self.expectedRemaining = pacePercent.map { Self.clamp(showsUsed ? 100 - $0 : $0) }
         self.resetText = resetText
+        self.windowMinutes = windowMinutes.flatMap { $0 > 0 ? $0 : nil } ?? Self.inferredMinutes(title: title)
+    }
+
+    /// Compact window label for the glance: "5h", "7d".
+    var label: String {
+        let base = self.windowMinutes.map(Self.compactDuration) ?? self.title.lowercased()
+        return [base, self.qualifier].compactMap(\.self).joined(separator: " ")
+    }
+
+    /// Spelled-out window label for settings: "5-hour", "7-day".
+    var longLabel: String {
+        let base = self.windowMinutes.map(Self.longDuration) ?? self.title
+        return [base, self.qualifier].compactMap(\.self).joined(separator: " ")
     }
 
     /// Remaining quota is below where steady use would leave it.
@@ -27,6 +52,25 @@ struct GlanceLane: Equatable, Identifiable {
     private static func clamp(_ value: Double) -> Double {
         guard value.isFinite else { return 0 }
         return min(100, max(0, value))
+    }
+
+    private static func inferredMinutes(title: String) -> Int? {
+        let lowered = title.lowercased()
+        if lowered.contains("week") { return 7 * 24 * 60 }
+        if lowered.contains("session") || lowered.contains("5-hour") || lowered.contains("5h") { return 5 * 60 }
+        return nil
+    }
+
+    private static func compactDuration(_ minutes: Int) -> String {
+        if minutes % 1440 == 0 { return "\(minutes / 1440)d" }
+        if minutes % 60 == 0 { return "\(minutes / 60)h" }
+        return "\(minutes)m"
+    }
+
+    private static func longDuration(_ minutes: Int) -> String {
+        if minutes % 1440 == 0 { return "\(minutes / 1440)-day" }
+        if minutes % 60 == 0 { return "\(minutes / 60)-hour" }
+        return "\(minutes)-minute"
     }
 }
 
@@ -68,6 +112,28 @@ struct GlanceProvider: Equatable, Identifiable {
     let lanes: [GlanceLane]
     let freshness: GlanceFreshness
 
+    /// Lanes are ordered shortest window first; lanes sharing a window length get a qualifier from their title.
+    init(provider: UsageProvider, name: String, lanes: [GlanceLane], freshness: GlanceFreshness) {
+        self.provider = provider
+        self.name = name
+        self.freshness = freshness
+        let ordered = lanes.enumerated().sorted { lhs, rhs in
+            let left = lhs.element.windowMinutes ?? .max
+            let right = rhs.element.windowMinutes ?? .max
+            return left == right ? lhs.offset < rhs.offset : left < right
+        }.map(\.element)
+        var seen: Set<Int> = []
+        self.lanes = ordered.map { lane in
+            guard let minutes = lane.windowMinutes else { return lane }
+            guard seen.insert(minutes).inserted else {
+                var qualified = lane
+                qualified.qualifier = Self.qualifier(from: lane.title)
+                return qualified
+            }
+            return lane
+        }
+    }
+
     var id: String { self.provider.rawValue }
 
     /// The lane closest to running out decides what the glance shows.
@@ -82,6 +148,12 @@ struct GlanceProvider: Equatable, Identifiable {
 
     var severity: GlanceSeverity {
         GlanceSeverity(lane: self.binding)
+    }
+
+    private static func qualifier(from title: String) -> String {
+        let generic: Set<String> = ["weekly", "week", "session", "limit", "usage", "5-hour", "hourly"]
+        let words = title.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        return words.first { !generic.contains($0) } ?? title.lowercased()
     }
 }
 

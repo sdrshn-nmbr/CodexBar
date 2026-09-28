@@ -149,8 +149,8 @@ final class GlanceController: StatusItemControlling {
 // MARK: - Upstream projection
 
 extension GlanceProvider {
-    init(model: UsageMenuCardView.Model) {
-        let lanes = model.metrics.map(GlanceLane.init(metric:))
+    init(model: UsageMenuCardView.Model, snapshot: UsageSnapshot?) {
+        let lanes = model.metrics.map { GlanceLane(metric: $0, snapshot: snapshot) }
         // A source error with fresh fallback data is a settings concern, not a glance concern.
         let freshness: GlanceFreshness = if let lastKnown = model.lastKnownUsageText {
             .stale(lastKnown)
@@ -167,21 +167,44 @@ extension UsageStore {
     /// Projects the same menu-card models CodexBar renders, so glance numbers never diverge from the full app.
     func glanceSnapshot(now: Date = Date()) -> GlanceSnapshot {
         let providers = self.enabledFirstPartyProvidersForDisplay().map { provider in
-            GlanceProvider(model: self.menuCardModel(for: provider, context: .menu, now: now))
+            GlanceProvider(
+                model: self.menuCardModel(for: provider, context: .menu, now: now),
+                snapshot: self.presentationSnapshot(for: provider))
         }
         return GlanceSnapshot(providers: providers)
     }
 }
 
 extension GlanceLane {
-    init(metric: UsageMenuCardView.Model.Metric) {
+    init(metric: UsageMenuCardView.Model.Metric, snapshot: UsageSnapshot? = nil) {
         self.init(
             id: metric.id,
             title: metric.title,
             percent: metric.percent,
             showsUsed: metric.percentStyle == .used,
             pacePercent: metric.pacePercent,
-            resetText: metric.resetText)
+            resetText: metric.resetText.map(Self.bareResetText),
+            windowMinutes: Self.windowMinutes(metricID: metric.id, snapshot: snapshot))
+    }
+
+    /// Menu-card metric ids name the snapshot slot they came from; extra windows use their own ids.
+    private static func windowMinutes(metricID: String, snapshot: UsageSnapshot?) -> Int? {
+        guard let snapshot else { return nil }
+        switch metricID {
+        case "primary": return snapshot.primary?.windowMinutes
+        case "secondary": return snapshot.secondary?.windowMinutes
+        case "tertiary": return snapshot.tertiary?.windowMinutes
+        default: return snapshot.extraRateWindows?.first { $0.id == metricID }?.window.windowMinutes
+        }
+    }
+
+    /// "Resets in 4h 7m" -> "4h 7m"; "Resets 3:00 PM" -> "3:00 PM". The lane label already names what resets.
+    static func bareResetText(_ text: String) -> String {
+        let prefixes = ["Resets in %@", "Resets %@", "Resets: %@"].map { String(format: L($0), "") }
+        for prefix in prefixes where !prefix.isEmpty && text.hasPrefix(prefix) {
+            return String(text.dropFirst(prefix.count))
+        }
+        return text
     }
 }
 
@@ -196,9 +219,10 @@ struct GlanceSettingsMetricRow<Fallback: View>: View {
            ProviderDetailView<EmptyView>.metricInlinePresentation(self.metric) == .progress
         {
             let presentation = self.metric.linePresentation(title: self.title)
+            let lane = GlanceLane(metric: self.metric)
             GlanceSettingsLaneRow(
-                lane: GlanceLane(metric: self.metric),
-                title: self.title,
+                lane: lane,
+                title: lane.longLabel,
                 resetText: presentation.resetText,
                 metaText: presentation.metaText,
                 detailText: self.metric.detailText)
