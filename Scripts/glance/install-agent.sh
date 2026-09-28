@@ -34,7 +34,7 @@ cat >"$PLIST" <<PLIST
         <dict><key>Hour</key><integer>21</integer><key>Minute</key><integer>30</integer></dict>
     </array>
     <key>Nice</key><integer>5</integer>
-    <key>ProcessType</key><string>Adaptive</string>
+    <key>ProcessType</key><string>Standard</string>
     <key>StandardOutPath</key><string>$GLANCE_HOME/sync.log</string>
     <key>StandardErrorPath</key><string>$GLANCE_HOME/sync.log</string>
 </dict>
@@ -44,4 +44,3 @@ PLIST
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
 echo "Installed $LABEL. Run now with: launchctl kickstart gui/$(id -u)/$LABEL"
-
