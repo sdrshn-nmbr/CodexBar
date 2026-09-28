@@ -478,7 +478,8 @@ final class UsageStore {
     @ObservationIgnored let accountInfoCacheTTL: TimeInterval = 30
     /// Energy/WidgetKit floor for expensive local-history scans and their additional snapshot publications.
     /// Faster provider refreshes still update quota/status normally, but reuse token-cost history within this TTL.
-    static let minimumTokenFetchTTL: TimeInterval = 15 * 60
+    /// Variable so presentations can lengthen it (the glance fork scans cost history once a day).
+    static var minimumTokenFetchTTL: TimeInterval = 15 * 60
 
     var tokenFetchTTL: TimeInterval? {
         Self.tokenFetchTTL(

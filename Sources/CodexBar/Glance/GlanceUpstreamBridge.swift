@@ -9,6 +9,10 @@ import CodexBarCore
 /// behavior; only its status items are hidden. The glance chooses the notch when the Mac has one, else the menu bar.
 @MainActor
 final class GlanceController: StatusItemControlling {
+    /// Cost history decodes large local logs; the glance never shows it, so scan it at most daily.
+    /// Manual refresh still forces a scan.
+    static let costHistoryInterval: TimeInterval = 24 * 60 * 60
+
     let legacy: StatusItemController
     private let feed: GlanceFeed
     private let memoryRelief = GlanceMemoryRelief()
@@ -30,6 +34,7 @@ final class GlanceController: StatusItemControlling {
         -> StatusItemControlling
     {
         StatusItemController.hidesStatusItems = true
+        UsageStore.minimumTokenFetchTTL = Self.costHistoryInterval
         let legacy = StatusItemController(
             store: store,
             settings: settings,
