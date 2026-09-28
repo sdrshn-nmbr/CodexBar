@@ -487,10 +487,10 @@ struct ProviderMetricsInlineView: View {
                 .foregroundStyle(.secondary)
         } else {
             ForEach(self.model.metrics, id: \.id) { metric in
-                ProviderMetricInlineRow(
-                    metric: metric,
-                    title: ProviderDetailView<EmptyView>.metricTitle(provider: self.provider, metric: metric),
-                    progressColor: self.model.progressColor)
+                let title = ProviderDetailView<EmptyView>.metricTitle(provider: self.provider, metric: metric)
+                GlanceSettingsMetricRow(metric: metric, title: title) {
+                    ProviderMetricInlineRow(metric: metric, title: title, progressColor: self.model.progressColor)
+                }
             }
 
             if contentState.hasUsageNotes {
