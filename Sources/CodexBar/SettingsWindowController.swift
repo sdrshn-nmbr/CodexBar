@@ -76,7 +76,7 @@ final class SettingsWindowController: NSWindowController {
                 selection: selection,
                 managedCodexAccountCoordinator: managedCodexAccountCoordinator,
                 codexAccountPromotionCoordinator: codexAccountPromotionCoordinator,
-                runProviderLoginFlow: runProviderLoginFlow)
+                runProviderLoginFlow: runProviderLoginFlow).glanceSettingsRoot()
             let hostingController = NSHostingController(rootView: rootView)
             let window = NSWindow(
                 contentRect: NSRect(
