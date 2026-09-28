@@ -151,6 +151,8 @@ final class GlanceController: StatusItemControlling {
 extension GlanceProvider {
     /// Older than this, numbers are shown as stale. Covers a missed refresh plus Claude's 15-minute CLI reuse.
     static let staleAfter: TimeInterval = 30 * 60
+    /// Older than this, the header shows the data's age. Claude's CLI is re-run at most every 15 minutes.
+    static let showAgeAfter: TimeInterval = 5 * 60
 
     init(model: UsageMenuCardView.Model, snapshot: UsageSnapshot?, now: Date) {
         let lanes = model.metrics.map { GlanceLane(metric: $0, snapshot: snapshot) }
@@ -166,7 +168,13 @@ extension GlanceProvider {
         } else {
             .live
         }
-        self.init(provider: model.provider, name: model.providerName, lanes: lanes, freshness: freshness)
+        let ageText = age.flatMap { $0 >= Self.showAgeAfter ? Self.ageText($0) : nil }
+        self.init(
+            provider: model.provider,
+            name: model.providerName,
+            lanes: lanes,
+            freshness: freshness,
+            ageText: ageText)
     }
 
     static func ageText(_ age: TimeInterval) -> String {
