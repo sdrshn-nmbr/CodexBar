@@ -1,6 +1,10 @@
 import AppKit
 import CodexBarCore
 
+// The only glance file that depends on upstream app-layer types (UsageStore, menu-card models, StatusItemController,
+// SettingsPane). When an upstream sync fails to compile, the fix belongs here; every other glance file speaks only
+// Glance* types and CodexBarCore.
+
 /// Glance presentation over CodexBar's own controller. The wrapped controller keeps refresh, login, and settings
 /// behavior; only its status items are hidden. The glance chooses the notch when the Mac has one, else the menu bar.
 @MainActor
@@ -39,7 +43,7 @@ final class GlanceController: StatusItemControlling {
     init(legacy: StatusItemController, store: UsageStore) {
         self.legacy = legacy
         GlanceFonts.registerIfNeeded()
-        self.feed = GlanceFeed(store: store)
+        self.feed = GlanceFeed(source: { [weak store] in store?.glanceSnapshot() ?? .empty })
         let actions = GlanceActions(
             refresh: { [weak legacy] in legacy?.refreshNow() },
             openSettings: { [weak self] in self?.settingsOpenHandler?(nil) },
@@ -107,5 +111,40 @@ final class GlanceController: StatusItemControlling {
         self.notch.hide()
         self.menuBar.hide()
         self.legacy.prepareForAppShutdown()
+    }
+}
+
+// MARK: - Upstream projection
+
+extension GlanceProvider {
+    init(model: UsageMenuCardView.Model) {
+        let lanes = model.metrics.map { metric in
+            GlanceLane(
+                id: metric.id,
+                title: metric.title,
+                percent: metric.percent,
+                showsUsed: metric.percentStyle == .used,
+                pacePercent: metric.pacePercent,
+                resetText: metric.resetText)
+        }
+        // A source error with fresh fallback data is a settings concern, not a glance concern.
+        let freshness: GlanceFreshness = if let lastKnown = model.lastKnownUsageText {
+            .stale(lastKnown)
+        } else if lanes.isEmpty {
+            model.subtitleStyle == .loading ? .refreshing : .problem(model.placeholder ?? model.subtitleText)
+        } else {
+            .live
+        }
+        self.init(provider: model.provider, name: model.providerName, lanes: lanes, freshness: freshness)
+    }
+}
+
+extension UsageStore {
+    /// Projects the same menu-card models CodexBar renders, so glance numbers never diverge from the full app.
+    func glanceSnapshot(now: Date = Date()) -> GlanceSnapshot {
+        let providers = self.enabledFirstPartyProvidersForDisplay().map { provider in
+            GlanceProvider(model: self.menuCardModel(for: provider, context: .menu, now: now))
+        }
+        return GlanceSnapshot(providers: providers)
     }
 }
