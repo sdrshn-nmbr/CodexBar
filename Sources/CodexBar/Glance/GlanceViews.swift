@@ -93,13 +93,19 @@ struct GlanceProviderRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(self.provider.name.uppercased())
                     .font(GlanceStyle.label(10, weight: .semibold))
                     .tracking(1.4)
                     .foregroundStyle(GlanceStyle.secondary)
                 if case let .stale(message) = self.provider.freshness {
-                    Circle().fill(GlanceStyle.amber).frame(width: 5, height: 5).help(message)
+                    Spacer(minLength: 8)
+                    // Old numbers stay visible but are never presented as live.
+                    Circle().fill(GlanceStyle.amber).frame(width: 5, height: 5)
+                    Text(message)
+                        .font(GlanceStyle.label(10))
+                        .foregroundStyle(GlanceStyle.amber.opacity(0.85))
+                        .lineLimit(1)
                 }
             }
             if self.provider.lanes.isEmpty {
@@ -113,6 +119,7 @@ struct GlanceProviderRow: View {
                         GlanceLaneRow(lane: lane)
                     }
                 }
+                .opacity(self.provider.isStale ? 0.45 : 1)
             }
         }
     }
@@ -234,5 +241,6 @@ struct GlanceEar: View {
                     .animation(GlanceStyle.settle, value: binding.remaining)
             }
         }
+        .opacity(self.provider?.isStale == true ? 0.4 : 1)
     }
 }
