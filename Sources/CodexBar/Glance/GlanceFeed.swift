@@ -11,6 +11,8 @@ final class GlanceFeed {
     private(set) var revision = 0
 
     @ObservationIgnored private let source: @MainActor () -> GlanceSnapshot
+    /// Fires on every observed store change, including ones that leave the glance unchanged (e.g. cost scans).
+    @ObservationIgnored var onStoreActivity: (@MainActor () -> Void)?
     @ObservationIgnored private var rebuildScheduled = false
     @ObservationIgnored private var clockTask: Task<Void, Never>?
     @ObservationIgnored private let logger = CodexBarLog.logger(LogCategories.app)
@@ -35,6 +37,7 @@ final class GlanceFeed {
                 self?.scheduleRebuild()
             }
         }
+        self.onStoreActivity?()
         guard next != self.snapshot else { return }
         self.snapshot = next
         self.revision &+= 1
