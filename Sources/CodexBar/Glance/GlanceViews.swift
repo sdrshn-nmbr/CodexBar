@@ -42,10 +42,14 @@ struct GlanceBar: View {
         GeometryReader { proxy in
             let width = proxy.size.width
             ZStack(alignment: .leading) {
-                Capsule().fill(GlanceStyle.track)
+                Capsule().fill(GlanceStyle.track).frame(height: self.height)
                 Capsule()
                     .fill(GlanceStyle.tint(self.severity))
-                    .frame(width: max(self.height, width * self.lane.remaining / 100))
+                    .frame(width: max(self.height, width * self.lane.remaining / 100), height: self.height)
+            }
+            .overlay(alignment: .leading) {
+                // Pace tick: where steady use would leave the quota right now. Drawn as an overlay so it never
+                // changes the bar's thickness.
                 if let expected = self.lane.expectedRemaining {
                     Rectangle()
                         .fill(GlanceStyle.primary.opacity(0.7))
@@ -53,8 +57,7 @@ struct GlanceBar: View {
                         .offset(x: width * expected / 100 - 0.5)
                 }
             }
-            .frame(height: self.height)
-            .frame(maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(height: self.height + 5)
         .animation(GlanceStyle.settle, value: self.lane.remaining)
@@ -83,9 +86,14 @@ struct GlancePercent: View {
 struct GlanceProviderRow: View {
     let provider: GlanceProvider
 
+    /// Fixed columns so labels, numbers, bars, and reset times line up across every provider.
+    static let labelWidth: CGFloat = 22
+    static let valueWidth: CGFloat = 52
+    static let resetWidth: CGFloat = 72
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
                 Text(self.provider.name.uppercased())
                     .font(GlanceStyle.label(10, weight: .semibold))
                     .tracking(1.4)
@@ -93,49 +101,20 @@ struct GlanceProviderRow: View {
                 if case let .stale(message) = self.provider.freshness {
                     Circle().fill(GlanceStyle.amber).frame(width: 5, height: 5).help(message)
                 }
-                Spacer(minLength: 8)
-                if let binding = self.provider.binding {
-                    Text(Self.caption(binding))
-                        .font(GlanceStyle.label(10))
-                        .foregroundStyle(GlanceStyle.faint)
-                        .lineLimit(1)
-                }
             }
-            if let binding = self.provider.binding {
-                HStack(alignment: .center, spacing: 14) {
-                    GlancePercent(
-                        value: binding.remaining,
-                        size: 30,
-                        color: GlanceStyle.tint(self.provider.severity))
-                        .frame(width: 78, alignment: .leading)
-                    VStack(alignment: .leading, spacing: 7) {
-                        GlanceBar(lane: binding, severity: self.provider.severity)
-                        ForEach(self.provider.secondaryLanes.prefix(2)) { lane in
-                            HStack(spacing: 6) {
-                                Text(lane.title.lowercased())
-                                    .foregroundStyle(GlanceStyle.faint)
-                                Spacer(minLength: 4)
-                                Text("\(Int(lane.remaining.rounded()))%")
-                                    .foregroundStyle(GlanceStyle.secondary)
-                                if let reset = lane.resetText {
-                                    Text(reset).foregroundStyle(GlanceStyle.faint).lineLimit(1)
-                                }
-                            }
-                            .font(GlanceStyle.label(10))
-                        }
-                    }
-                }
-            } else {
+            if self.provider.lanes.isEmpty {
                 Text(Self.emptyText(self.provider.freshness))
                     .font(GlanceStyle.label(11))
                     .foregroundStyle(GlanceStyle.secondary)
                     .lineLimit(2)
+            } else {
+                VStack(spacing: 9) {
+                    ForEach(self.provider.lanes) { lane in
+                        GlanceLaneRow(lane: lane)
+                    }
+                }
             }
         }
-    }
-
-    private static func caption(_ lane: GlanceLane) -> String {
-        [lane.title.lowercased(), lane.resetText].compactMap(\.self).joined(separator: "  ·  ")
     }
 
     private static func emptyText(_ freshness: GlanceFreshness) -> String {
@@ -144,6 +123,35 @@ struct GlanceProviderRow: View {
         case let .problem(message), let .stale(message): message
         case .live: "No usage limits reported"
         }
+    }
+}
+
+/// One quota window: window length, remaining percent, bar with pace tick, time until reset.
+struct GlanceLaneRow: View {
+    let lane: GlanceLane
+
+    var body: some View {
+        let severity = GlanceSeverity(lane: self.lane)
+        HStack(alignment: .center, spacing: 10) {
+            Text(self.lane.label)
+                .font(GlanceStyle.numerals(11))
+                .foregroundStyle(GlanceStyle.faint)
+                .lineLimit(1)
+                .frame(width: GlanceProviderRow.labelWidth, alignment: .leading)
+            GlancePercent(value: self.lane.remaining, size: 20, color: GlanceStyle.tint(severity))
+                .frame(width: GlanceProviderRow.valueWidth, alignment: .leading)
+            GlanceBar(lane: self.lane, severity: severity)
+            Text(self.lane.resetText ?? "")
+                .font(GlanceStyle.label(10))
+                .foregroundStyle(GlanceStyle.faint)
+                .lineLimit(1)
+                .monospacedDigit()
+                .frame(width: GlanceProviderRow.resetWidth, alignment: .trailing)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            "\(self.lane.longLabel) window, \(Int(self.lane.remaining.rounded())) percent left"
+                + (self.lane.resetText.map { ", resets in \($0)" } ?? ""))
     }
 }
 
