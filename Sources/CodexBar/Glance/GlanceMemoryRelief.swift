@@ -2,10 +2,12 @@ import CodexBarCore
 import Darwin
 import Foundation
 
-/// Returns free allocator pages to the system after refresh bursts.
+/// Keeps the idle footprint near the live UI state after refresh bursts.
 ///
-/// CodexBar's cost scan decodes large histories and frees them, but the allocator keeps those pages resident, so
-/// footprint stays ~2x the live heap. Relief runs off the main thread after refreshes settle and on a slow timer.
+/// CodexBar's cost scan decodes large histories and memoizes them in process (~200 MB for long Claude histories),
+/// then the allocator keeps freed pages resident. Since the glance scans cost at most daily, relief drops the
+/// decoded artifacts (rebuilt from disk on the next scan) and returns free pages to the system. It runs off the
+/// main thread once refreshes settle and on a slow timer.
 @MainActor
 final class GlanceMemoryRelief {
     private var debounceTask: Task<Void, Never>?
@@ -44,6 +46,7 @@ final class GlanceMemoryRelief {
     private func relieve(reason: String) {
         let logger = self.logger
         Task.detached(priority: .utility) {
+            CostUsageMemoryRelease.releaseClaudeArtifacts()
             let released = malloc_zone_pressure_relief(nil, 0)
             logger.debug(
                 "Glance memory relief",
@@ -51,4 +54,3 @@ final class GlanceMemoryRelief {
         }
     }
 }
-
