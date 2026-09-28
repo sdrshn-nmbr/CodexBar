@@ -21,16 +21,14 @@ struct GlanceSettingsBacking<Material: View>: View {
     }
 }
 
+/// Unconditional modifiers with conditional values: branching here would hide PreferencesView's ideal size from
+/// NSHostingController and open the settings window at its minimum fitting size.
 private struct GlanceSettingsRootStyle: ViewModifier {
     func body(content: Content) -> some View {
-        if GlanceSettingsTheme.isActive {
-            content
-                .environment(\.colorScheme, .dark)
-                .tint(GlanceStyle.primary)
-                .background(GlanceStyle.ink)
-        } else {
-            content
-        }
+        let active = GlanceSettingsTheme.isActive
+        content
+            .preferredColorScheme(active ? .dark : nil)
+            .tint(active ? GlanceStyle.primary : nil)
     }
 }
 
@@ -105,4 +103,3 @@ struct GlanceSettingsLaneRow: View {
         .padding(.vertical, 4)
     }
 }
-
