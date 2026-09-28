@@ -1,5 +1,6 @@
 import AppKit
 import CodexBarCore
+import SwiftUI
 
 // The only glance file that depends on upstream app-layer types (UsageStore, menu-card models, StatusItemController,
 // SettingsPane). When an upstream sync fails to compile, the fix belongs here; every other glance file speaks only
@@ -34,6 +35,7 @@ final class GlanceController: StatusItemControlling {
         -> StatusItemControlling
     {
         StatusItemController.hidesStatusItems = true
+        GlanceSettingsTheme.isActive = ProcessInfo.processInfo.environment["CODEXBAR_GLANCE_SETTINGS_THEME"] != "0"
         UsageStore.minimumTokenFetchTTL = Self.costHistoryInterval
         let legacy = StatusItemController(
             store: store,
@@ -69,7 +71,14 @@ final class GlanceController: StatusItemControlling {
     }
 
     private func placeSurfaces() {
-        let forceMenuBar = ProcessInfo.processInfo.environment["CODEXBAR_GLANCE_SURFACE"] == "menubar"
+        // Development overrides: "menubar" forces the fallback surface, "none" hides both for side-by-side runs.
+        let surfaceOverride = ProcessInfo.processInfo.environment["CODEXBAR_GLANCE_SURFACE"]
+        if surfaceOverride == "none" {
+            self.notch.hide()
+            self.menuBar.hide()
+            return
+        }
+        let forceMenuBar = surfaceOverride == "menubar"
         if !forceMenuBar, let screen = NotchPanelController.notchScreen() {
             self.menuBar.hide()
             self.notch.show(on: screen)
@@ -82,6 +91,15 @@ final class GlanceController: StatusItemControlling {
 
     func setSettingsOpenHandler(_ handler: @escaping @MainActor (SettingsPane?) -> Void) {
         self.settingsOpenHandler = handler
+        // Development aid for screenshotting settings: CODEXBAR_GLANCE_OPEN_SETTINGS=general|<provider id>.
+        if let requested = ProcessInfo.processInfo.environment["CODEXBAR_GLANCE_OPEN_SETTINGS"] {
+            let named: [String: SettingsPane] = [
+                "general": .general, "usageSpend": .usageSpend, "notifications": .notifications,
+                "menuBar": .menuBar, "menu": .menu, "advanced": .advanced, "about": .about,
+            ]
+            let pane = named[requested] ?? UsageProvider(rawValue: requested).map { SettingsPane.provider($0.instanceID) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { handler(pane) }
+        }
         self.legacy.setSettingsOpenHandler(handler)
     }
 
@@ -127,15 +145,7 @@ final class GlanceController: StatusItemControlling {
 
 extension GlanceProvider {
     init(model: UsageMenuCardView.Model) {
-        let lanes = model.metrics.map { metric in
-            GlanceLane(
-                id: metric.id,
-                title: metric.title,
-                percent: metric.percent,
-                showsUsed: metric.percentStyle == .used,
-                pacePercent: metric.pacePercent,
-                resetText: metric.resetText)
-        }
+        let lanes = model.metrics.map(GlanceLane.init(metric:))
         // A source error with fresh fallback data is a settings concern, not a glance concern.
         let freshness: GlanceFreshness = if let lastKnown = model.lastKnownUsageText {
             .stale(lastKnown)
@@ -155,5 +165,40 @@ extension UsageStore {
             GlanceProvider(model: self.menuCardModel(for: provider, context: .menu, now: now))
         }
         return GlanceSnapshot(providers: providers)
+    }
+}
+
+extension GlanceLane {
+    init(metric: UsageMenuCardView.Model.Metric) {
+        self.init(
+            id: metric.id,
+            title: metric.title,
+            percent: metric.percent,
+            showsUsed: metric.percentStyle == .used,
+            pacePercent: metric.pacePercent,
+            resetText: metric.resetText)
+    }
+}
+
+/// Settings usage row: glance-styled lanes for progress metrics, upstream rendering for everything else.
+struct GlanceSettingsMetricRow<Fallback: View>: View {
+    let metric: UsageMenuCardView.Model.Metric
+    let title: String
+    @ViewBuilder let fallback: () -> Fallback
+
+    var body: some View {
+        if GlanceSettingsTheme.isActive,
+           ProviderDetailView<EmptyView>.metricInlinePresentation(self.metric) == .progress
+        {
+            let presentation = self.metric.linePresentation(title: self.title)
+            GlanceSettingsLaneRow(
+                lane: GlanceLane(metric: self.metric),
+                title: self.title,
+                resetText: presentation.resetText,
+                metaText: presentation.metaText,
+                detailText: self.metric.detailText)
+        } else {
+            self.fallback()
+        }
     }
 }

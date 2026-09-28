@@ -11,6 +11,9 @@ struct SettingsIconChip: View {
     let color: Color
 
     var body: some View {
+        if GlanceSettingsTheme.isActive {
+            GlanceSettingsGlyph(systemImage: self.systemImage, side: Self.side)
+        } else {
         Image(systemName: self.systemImage)
             .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(.white)
@@ -22,6 +25,7 @@ struct SettingsIconChip: View {
                         startPoint: .top,
                         endPoint: .bottom)))
             .accessibilityHidden(true)
+        }
     }
 }
 
@@ -218,8 +222,12 @@ struct SettingsSection<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if let title, !title.isEmpty {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
+                if GlanceSettingsTheme.isActive {
+                    GlanceSettingsSectionTitle(title: title)
+                } else {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                }
             }
             if let caption {
                 Text(caption)
