@@ -21,6 +21,8 @@ final class GlanceController: StatusItemControlling {
     private var menuBar: MenuBarGlanceController!
     private var settingsOpenHandler: (@MainActor (SettingsPane?) -> Void)?
     private var screenObserver: NSObjectProtocol?
+    private var surfaceObserver: GlanceSurfaceObserver?
+    private var placedSurface: GlanceSurface?
     private let logger = CodexBarLog.logger(LogCategories.app)
 
     // swiftlint:disable:next function_parameter_count
@@ -73,9 +75,15 @@ final class GlanceController: StatusItemControlling {
         { [weak self] _ in
             MainActor.assumeIsolated { self?.placeSurfaces() }
         }
+        self.surfaceObserver = GlanceSurfaceObserver { [weak self] in
+            guard let self, GlanceSurface.stored != self.placedSurface else { return }
+            self.placeSurfaces()
+        }
     }
 
     private func placeSurfaces() {
+        let chosen = GlanceSurface.stored
+        self.placedSurface = chosen
         // Development overrides: "menubar" forces the fallback surface, "none" hides both for side-by-side runs.
         let surfaceOverride = ProcessInfo.processInfo.environment["CODEXBAR_GLANCE_SURFACE"]
         if surfaceOverride == "none" {
@@ -83,14 +91,14 @@ final class GlanceController: StatusItemControlling {
             self.menuBar.hide()
             return
         }
-        let forceMenuBar = surfaceOverride == "menubar"
+        let forceMenuBar = surfaceOverride == "menubar" || chosen == .menuBar
         if !forceMenuBar, let screen = NotchPanelController.notchScreen() {
             self.menuBar.hide()
             self.notch.show(on: screen)
         } else {
             self.notch.hide()
             self.menuBar.show()
-            self.logger.info("No notch display; glance using menu bar")
+            self.logger.info("Glance using menu bar", metadata: ["chosen": chosen.rawValue])
         }
     }
 
@@ -138,6 +146,7 @@ final class GlanceController: StatusItemControlling {
         if let screenObserver {
             NotificationCenter.default.removeObserver(screenObserver)
         }
+        self.surfaceObserver?.invalidate()
         self.feed.stop()
         self.memoryRelief.stop()
         self.notch.hide()
