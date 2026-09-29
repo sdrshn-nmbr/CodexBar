@@ -4,15 +4,16 @@ A fork of [CodexBar](https://github.com/steipete/CodexBar) that shows your Codex
 
 <p align="center"><img src="../docs/glance/notch.png" width="528" alt="Collapsed notch: a ring and percent for Codex on the left, Claude on the right"></p>
 
-Collapsed, each side of the notch shows one provider: a ring and the percent left on whichever limit will run out first. Hover the notch and it opens into the full card:
+Collapsed, each side of the notch shows one provider: a ring and the percent left on whichever limit will run out first. Hover the notch and it opens into a short card, one column per provider:
 
 <p align="center"><img src="../docs/glance/card.png" width="420" alt="Expanded card: one row per limit for Codex and Claude"></p>
 
 ## What's different from CodexBar
 
-- **It lives in the notch.** Hover to open, move away to close. Macs without a notch get the same card from a menu bar item.
-- **Every limit gets the same row.** A row is the window length (`5h`, `7d`), percent left, a bar, and time until reset. Rows go shortest window first and line up across providers, so you can read straight down a column. Claude shows both its 5-hour and 7-day limits; Codex shows its 7-day limit.
-- **The tick on each bar is your pace.** It marks where steady use would leave you right now. If the bar ends left of the tick, you're using that limit faster than it refills.
+- **Notch or menu bar, your choice.** Hover the notch to open, move away to close. Or pick **Menu bar** under Settings → General → Show usage in. Displays without a notch always use the menu bar.
+- **Every limit reads the same way.** Each one is a big percent left, with its window length (`5h`, `7d`) and time until reset underneath, shortest window first. Claude shows its 5-hour and 7-day limits; Codex shows its 7-day limit.
+- **An amber dot means you're ahead of pace.** You're using that limit faster than steady use would, so it may run out before it resets.
+- **Click a provider name for its settings.** Right-click the card for Refresh, Settings, and Quit.
 - **Color only when it matters.** Everything is white until a limit gets low: amber below 25% (or below 50% while ahead of pace), red below 10%.
 - **Details stay in Settings.** The card is for a quick look. Credits, cost history, accounts, and source options live in Settings, which uses the same black palette, monochrome sidebar, and limit rows.
 - **It uses much less memory.** See below.

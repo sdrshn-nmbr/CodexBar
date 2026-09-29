@@ -83,37 +83,61 @@ struct GlancePercent: View {
     }
 }
 
-struct GlanceProviderRow: View {
-    let provider: GlanceProvider
-    var labelWidth: CGFloat = Self.labelWidth
+/// Expanded glance: one column per provider, one stat per quota window, split by a hairline.
+struct GlanceCard: View {
+    let snapshot: GlanceSnapshot
+    let actions: GlanceActions
 
-    /// Fixed columns so labels, numbers, bars, and reset times line up across every provider.
-    static let labelWidth: CGFloat = 22
-    static let valueWidth: CGFloat = 52
-    static let resetWidth: CGFloat = 72
+    var body: some View {
+        Group {
+            if self.snapshot.providers.isEmpty {
+                Text("No providers enabled")
+                    .font(GlanceStyle.label(11))
+                    .foregroundStyle(GlanceStyle.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                HStack(alignment: .top, spacing: 0) {
+                    ForEach(Array(self.snapshot.providers.enumerated()), id: \.element.id) { index, provider in
+                        if index > 0 {
+                            Rectangle().fill(GlanceStyle.hairline).frame(width: 1).padding(.horizontal, 18)
+                        }
+                        GlanceProviderColumn(provider: provider, openSettings: self.actions.openSettings)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, 22)
+        .padding(.top, 16)
+        .padding(.bottom, 18)
+        .contentShape(Rectangle())
+        .contextMenu {
+            Button("Refresh") { self.actions.refresh() }
+            Button("Settings…") { self.actions.openSettings() }
+            Divider()
+            Button("Quit CodexBar") { self.actions.quit() }
+        }
+    }
+}
+
+struct GlanceProviderColumn: View {
+    let provider: GlanceProvider
+    let openSettings: @MainActor () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(self.provider.name.uppercased())
-                    .font(GlanceStyle.label(10, weight: .semibold))
-                    .tracking(1.4)
-                    .foregroundStyle(GlanceStyle.secondary)
-                if case let .stale(message) = self.provider.freshness {
-                    Spacer(minLength: 8)
-                    // Old numbers stay visible but are never presented as live.
-                    Circle().fill(GlanceStyle.amber).frame(width: 5, height: 5)
-                    Text(message)
-                        .font(GlanceStyle.label(10))
-                        .foregroundStyle(GlanceStyle.amber.opacity(0.85))
-                        .lineLimit(1)
-                } else if let ageText = self.provider.ageText {
-                    Spacer(minLength: 8)
-                    Text(ageText)
-                        .font(GlanceStyle.label(10))
-                        .foregroundStyle(GlanceStyle.faint)
-                        .lineLimit(1)
+                Button(action: self.openSettings) {
+                    Text(self.provider.name.uppercased())
+                        .font(GlanceStyle.label(10, weight: .semibold))
+                        .tracking(1.4)
+                        .foregroundStyle(GlanceStyle.secondary)
                 }
+                .buttonStyle(.plain)
+                .help("Open \(self.provider.name) settings")
+                Spacer(minLength: 4)
+                self.freshnessBadge
             }
             if self.provider.lanes.isEmpty {
                 Text(Self.emptyText(self.provider.freshness))
@@ -121,13 +145,30 @@ struct GlanceProviderRow: View {
                     .foregroundStyle(GlanceStyle.secondary)
                     .lineLimit(2)
             } else {
-                VStack(spacing: 9) {
+                HStack(alignment: .top, spacing: 20) {
                     ForEach(self.provider.lanes) { lane in
-                        GlanceLaneRow(lane: lane, labelWidth: self.labelWidth)
+                        GlanceStat(lane: lane)
                     }
                 }
                 .opacity(self.provider.isStale ? 0.45 : 1)
             }
+        }
+    }
+
+    @ViewBuilder private var freshnessBadge: some View {
+        if case let .stale(message) = self.provider.freshness {
+            // Old numbers stay visible but are never presented as live.
+            HStack(spacing: 4) {
+                Circle().fill(GlanceStyle.amber).frame(width: 4, height: 4)
+                Text(message).foregroundStyle(GlanceStyle.amber.opacity(0.85))
+            }
+            .font(GlanceStyle.label(10))
+            .lineLimit(1)
+        } else if let ageText = self.provider.ageText {
+            Text(ageText)
+                .font(GlanceStyle.label(10))
+                .foregroundStyle(GlanceStyle.faint)
+                .lineLimit(1)
         }
     }
 
@@ -140,96 +181,46 @@ struct GlanceProviderRow: View {
     }
 }
 
-/// One quota window: window length, remaining percent, bar with pace tick, time until reset.
-struct GlanceLaneRow: View {
+/// One quota window: big remaining percent, then window length and time until reset.
+/// An amber dot marks a window being used faster than steady pace, which the bars' tick used to show.
+struct GlanceStat: View {
     let lane: GlanceLane
-    var labelWidth: CGFloat = GlanceProviderRow.labelWidth
 
     var body: some View {
         let severity = GlanceSeverity(lane: self.lane)
-        HStack(alignment: .center, spacing: 10) {
-            Text(self.lane.label)
-                .font(GlanceStyle.numerals(11))
-                .foregroundStyle(GlanceStyle.faint)
-                .lineLimit(1)
-                .frame(width: self.labelWidth, alignment: .leading)
-            GlancePercent(value: self.lane.remaining, size: 20, color: GlanceStyle.tint(severity))
-                .frame(width: GlanceProviderRow.valueWidth, alignment: .leading)
-            GlanceBar(lane: self.lane, severity: severity)
-            Text(self.lane.resetText ?? "")
-                .font(GlanceStyle.label(10))
-                .foregroundStyle(GlanceStyle.faint)
-                .lineLimit(1)
-                .monospacedDigit()
-                .frame(width: GlanceProviderRow.resetWidth, alignment: .trailing)
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: 1) {
+                GlancePercent(value: self.lane.remaining, size: 26, color: GlanceStyle.tint(severity))
+                if self.lane.isAheadOfPace, severity == .calm {
+                    Circle()
+                        .fill(GlanceStyle.amber)
+                        .frame(width: 4, height: 4)
+                        .padding(.leading, 3)
+                        .alignmentGuide(.firstTextBaseline) { $0[.bottom] + 14 }
+                        .help("Using this limit faster than steady pace")
+                }
+            }
+            HStack(spacing: 5) {
+                Text(self.lane.label)
+                    .font(GlanceStyle.numerals(10))
+                    .foregroundStyle(GlanceStyle.secondary)
+                if let reset = self.lane.resetText {
+                    Text(reset)
+                        .font(GlanceStyle.label(10))
+                        .foregroundStyle(GlanceStyle.faint)
+                }
+            }
+            .lineLimit(1)
+            .fixedSize()
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
             "\(self.lane.longLabel) window, \(Int(self.lane.remaining.rounded())) percent left"
-                + (self.lane.resetText.map { ", resets in \($0)" } ?? ""))
+                + (self.lane.resetText.map { ", resets in \($0)" } ?? "")
+                + (self.lane.isAheadOfPace ? ", ahead of pace" : ""))
     }
 }
 
-struct GlanceCard: View {
-    let snapshot: GlanceSnapshot
-    let actions: GlanceActions
-
-    /// One label column for the whole card, wide enough for its longest label ("7d fable"), so rows stay aligned.
-    private var labelWidth: CGFloat {
-        let longest = self.snapshot.providers.flatMap(\.lanes).map(\.label.count).max() ?? 0
-        return max(GlanceProviderRow.labelWidth, CGFloat(longest) * 7 + 2)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if self.snapshot.providers.isEmpty {
-                Text("No providers enabled")
-                    .font(GlanceStyle.label(11))
-                    .foregroundStyle(GlanceStyle.secondary)
-                    .padding(.vertical, 14)
-            }
-            ForEach(Array(self.snapshot.providers.enumerated()), id: \.element.id) { index, provider in
-                if index > 0 {
-                    Rectangle().fill(GlanceStyle.hairline).frame(height: 1).padding(.vertical, 12)
-                }
-                GlanceProviderRow(provider: provider, labelWidth: self.labelWidth)
-            }
-            HStack(spacing: 14) {
-                Spacer()
-                GlanceIconButton(symbol: "arrow.clockwise", help: "Refresh", action: self.actions.refresh)
-                GlanceIconButton(symbol: "slider.horizontal.3", help: "Details & settings", action: self.actions.openSettings)
-                GlanceIconButton(symbol: "power", help: "Quit", action: self.actions.quit)
-            }
-            .padding(.top, 14)
-        }
-        .padding(.horizontal, 18)
-        .padding(.top, 14)
-        .padding(.bottom, 10)
-    }
-}
-
-struct GlanceIconButton: View {
-    let symbol: String
-    let help: String
-    let action: @MainActor () -> Void
-    @State private var hovering = false
-
-    var body: some View {
-        Button(action: self.action) {
-            Image(systemName: self.symbol)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(self.hovering ? GlanceStyle.primary : GlanceStyle.faint)
-                .frame(width: 18, height: 18)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(self.help)
-        .onHover { self.hovering = $0 }
-        .animation(.easeOut(duration: 0.12), value: self.hovering)
-    }
-}
-
-/// The collapsed glance for one provider: ring plus number, sized to sit beside the notch or in the menu bar.
 struct GlanceEar: View {
     let provider: GlanceProvider?
     var numeralSize: CGFloat = 12

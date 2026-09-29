@@ -132,6 +132,8 @@ struct GeneralPane: View {
                         }
                     })
 
+                GlanceSurfaceSettingsRow()
+
                 Toggle(L("start_at_login_title"), isOn: self.$settings.launchAtLogin)
             } header: {
                 Text(L("section_system"))
