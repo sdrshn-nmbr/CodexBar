@@ -542,3 +542,9 @@ extension CostUsageClaudeReportMemo {
         self.lock.withLock { self.entries.removeAll() }
     }
 }
+
+extension CostUsageMemoryRelease {
+    public static func releaseCodexArtifacts() async {
+        await CostUsageStoreAccess.releaseDecodedCodexCaches()
+    }
+}
