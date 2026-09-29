@@ -76,7 +76,8 @@ fi
 log "building $target"
 swift build --product CodexBar >"$GLANCE_HOME/last-build.log" 2>&1 || fail "build failed (see last-build.log)"
 swift test --filter GlanceModelTests >"$GLANCE_HOME/last-test.log" 2>&1 || fail "glance tests failed (see last-test.log)"
-./Scripts/package_app.sh release >"$GLANCE_HOME/last-package.log" 2>&1 || fail "packaging failed (see last-package.log)"
+CODEXBAR_SKIP_LAUNCH_SMOKE=1 ./Scripts/package_app.sh release >"$GLANCE_HOME/last-package.log" 2>&1 \
+  || fail "packaging failed (see last-package.log)"
 
 if security find-identity -p codesigning -v | grep -q "\"$SIGN_IDENTITY\""; then
   log "signing with $SIGN_IDENTITY"
@@ -108,6 +109,16 @@ mkdir -p "$(dirname "$CLI_LINK")"
 ln -sf "$APP_DEST/Contents/Helpers/CodexBarCLI" "$CLI_LINK"
 if [[ "$was_running" == "1" || "${GLANCE_LAUNCH:-1}" == "1" ]]; then
   open "$APP_DEST"
+  sleep 8
+  if ! pgrep -x CodexBar >/dev/null; then
+    if [[ -d "$GLANCE_HOME/previous/CodexBar.app" ]]; then
+      rm -rf "$APP_DEST"
+      ditto "$GLANCE_HOME/previous/CodexBar.app" "$APP_DEST"
+      rm -f "$STATE_FILE"
+      open "$APP_DEST"
+    fi
+    fail "installed $target exited at launch; restored previous build"
+  fi
 fi
 
 if [[ "$rebased" == "1" ]]; then
