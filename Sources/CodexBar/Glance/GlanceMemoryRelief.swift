@@ -47,6 +47,7 @@ final class GlanceMemoryRelief {
         let logger = self.logger
         Task.detached(priority: .utility) {
             CostUsageMemoryRelease.releaseClaudeArtifacts()
+            await CostUsageMemoryRelease.releaseCodexArtifacts()
             let released = malloc_zone_pressure_relief(nil, 0)
             logger.debug(
                 "Glance memory relief",
