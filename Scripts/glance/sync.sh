@@ -77,7 +77,8 @@ log "building $target"
 swift build --product CodexBar >"$GLANCE_HOME/last-build.log" 2>&1 || fail "build failed (see last-build.log)"
 swift test --filter GlanceModelTests >"$GLANCE_HOME/last-test.log" 2>&1 || fail "glance tests failed (see last-test.log)"
 xcodebuild -resolvePackageDependencies -project WidgetExtension/CodexBarWidgetExtension.xcodeproj \
-  -scheme CodexBarWidgetExtension >"$GLANCE_HOME/last-resolve.log" 2>&1 \
+  -scheme CodexBarWidgetExtension -derivedDataPath .build/xcode-widget-extension-release \
+  >"$GLANCE_HOME/last-resolve.log" 2>&1 \
   || fail "widget dependency refresh failed (see last-resolve.log)"
 CODEXBAR_SKIP_LAUNCH_SMOKE=1 ./Scripts/package_app.sh release >"$GLANCE_HOME/last-package.log" 2>&1 \
   || fail "packaging failed (see last-package.log)"
