@@ -25,6 +25,17 @@ struct CodexWeeklyResetConfirmationTests {
     }
 
     @Test
+    func `earlier weekly boundary preserves briefly then publishes once it persists`() {
+        let previous = self.snapshot(offset: 0, weeklyUsed: 16, weeklyReset: self.resetAt)
+        let reanchoredReset = self.resetAt.addingTimeInterval(-4 * 24 * 60 * 60)
+        let soon = self.snapshot(offset: 5 * 60, weeklyUsed: 100, weeklyReset: reanchoredReset)
+        let persisted = self.snapshot(offset: 45 * 60, weeklyUsed: 100, weeklyReset: reanchoredReset)
+
+        #expect(CodexWeeklyResetConfirmation.initialDecision(previous: previous, initial: soon) == .preservePrevious)
+        #expect(CodexWeeklyResetConfirmation.initialDecision(previous: previous, initial: persisted) == .publishInitial)
+    }
+
+    @Test
     func `first low observation requires matching confirmation without prior state`() {
         let reset = self.resetAt.addingTimeInterval(7 * 24 * 60 * 60)
         let previousWithoutWeekly = self.snapshot(offset: 0, weeklyUsed: nil, weeklyReset: nil)
