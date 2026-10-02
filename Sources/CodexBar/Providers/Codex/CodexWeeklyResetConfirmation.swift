@@ -134,7 +134,8 @@ struct CodexWeeklyResetConfirmation: Sendable {
             return .preservePrevious
         }
         if let previousBoundary, let initialBoundary,
-           initialBoundary.timeIntervalSince(previousBoundary) < -Self.resetEquivalenceToleranceSeconds
+           initialBoundary.timeIntervalSince(previousBoundary) < -Self.resetEquivalenceToleranceSeconds,
+           !Self.previousOutlivedEarlierBoundaryGuard(previous: previous, current: initial)
         {
             return .preservePrevious
         }
@@ -183,7 +184,8 @@ struct CodexWeeklyResetConfirmation: Sendable {
             return .preservePrevious
         }
         if let previousBoundary, let confirmationBoundary,
-           confirmationBoundary.timeIntervalSince(previousBoundary) < -Self.resetEquivalenceToleranceSeconds
+           confirmationBoundary.timeIntervalSince(previousBoundary) < -Self.resetEquivalenceToleranceSeconds,
+           !Self.previousOutlivedEarlierBoundaryGuard(previous: previous, current: confirmation)
         {
             return .preservePrevious
         }
@@ -530,5 +532,12 @@ struct CodexWeeklyResetConfirmation: Sendable {
 
     private static func isFinite(_ date: Date) -> Bool {
         date.timeIntervalSinceReferenceDate.isFinite
+    }
+
+    /// An earlier weekly boundary is treated as a stale response, but one that keeps arriving past the
+    /// delayed-candidate window is the provider re-anchoring the week; publishing it avoids pinning old usage.
+    private static func previousOutlivedEarlierBoundaryGuard(previous: UsageSnapshot?, current: UsageSnapshot) -> Bool {
+        guard let previous else { return false }
+        return current.updatedAt.timeIntervalSince(previous.updatedAt) >= self.delayedCandidateMaximumAge
     }
 }
