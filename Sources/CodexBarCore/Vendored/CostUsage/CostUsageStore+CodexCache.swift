@@ -1606,8 +1606,8 @@ enum CostUsageStoreAccess {
     }
 }
 
-// Glance fork seam: drop the decoded Codex scan/read caches kept between scans. Actor isolation serializes this
-// with scans, and an in-flight scan's receipt baseline is left alone; the next scan re-reads from SQLite.
+/// Glance fork seam: drop the decoded Codex scan/read caches kept between scans. Actor isolation serializes this
+/// with scans, and an in-flight scan's receipt baseline is left alone; the next scan re-reads from SQLite.
 extension CostUsageStore {
     func releaseDecodedCodexCaches() {
         self.retainedCodexScan = nil
@@ -1622,4 +1622,3 @@ extension CostUsageStoreAccess {
         await self.sharedScanStores.store(cacheRoot: nil).releaseDecodedCodexCaches()
     }
 }
-

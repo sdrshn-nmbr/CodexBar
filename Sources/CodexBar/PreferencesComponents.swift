@@ -14,17 +14,17 @@ struct SettingsIconChip: View {
         if GlanceSettingsTheme.isActive {
             GlanceSettingsGlyph(systemImage: self.systemImage, side: Self.side)
         } else {
-        Image(systemName: self.systemImage)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: Self.side, height: Self.side)
-            .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(LinearGradient(
-                        colors: [self.color.opacity(0.85), self.color],
-                        startPoint: .top,
-                        endPoint: .bottom)))
-            .accessibilityHidden(true)
+            Image(systemName: self.systemImage)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: Self.side, height: Self.side)
+                .background(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(LinearGradient(
+                            colors: [self.color.opacity(0.85), self.color],
+                            startPoint: .top,
+                            endPoint: .bottom)))
+                .accessibilityHidden(true)
         }
     }
 }

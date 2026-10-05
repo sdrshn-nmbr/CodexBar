@@ -143,7 +143,9 @@ struct GlanceProvider: Equatable, Identifiable {
         }
     }
 
-    var id: String { self.provider.rawValue }
+    var id: String {
+        self.provider.rawValue
+    }
 
     var isStale: Bool {
         if case .stale = self.freshness { return true }
@@ -165,7 +167,7 @@ struct GlanceProvider: Equatable, Identifiable {
     }
 
     private static func qualifier(from title: String) -> String {
-        let generic: Set<String> = ["weekly", "week", "session", "limit", "usage", "5-hour", "hourly"]
+        let generic: Set = ["weekly", "week", "session", "limit", "usage", "5-hour", "hourly"]
         let words = title.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
         return words.first { !generic.contains($0) } ?? title.lowercased()
     }
