@@ -15,8 +15,13 @@ final class NotchState {
     static let flare: CGFloat = 7
     static let expandedWidth: CGFloat = 372
 
-    var collapsedWidth: CGFloat { self.notchWidth + Self.earWidth * 2 }
-    var bodyWidth: CGFloat { self.isExpanded ? max(self.collapsedWidth, Self.expandedWidth) : self.collapsedWidth }
+    var collapsedWidth: CGFloat {
+        self.notchWidth + Self.earWidth * 2
+    }
+
+    var bodyWidth: CGFloat {
+        self.isExpanded ? max(self.collapsedWidth, Self.expandedWidth) : self.collapsedWidth
+    }
 }
 
 /// Notch silhouette: square top that flares into the menu bar, rounded bottom corners.
@@ -94,8 +99,13 @@ struct NotchRootView: View {
 }
 
 final class GlancePanel: NSPanel {
-    override var canBecomeKey: Bool { false }
-    override var canBecomeMain: Bool { false }
+    override var canBecomeKey: Bool {
+        false
+    }
+
+    override var canBecomeMain: Bool {
+        false
+    }
 
     init(contentRect: NSRect, level: NSWindow.Level) {
         super.init(
@@ -145,7 +155,9 @@ final class NotchPanelController {
         NSScreen.screens.first { $0.safeAreaInsets.top > 0 && $0.auxiliaryTopLeftArea != nil }
     }
 
-    var isShowing: Bool { self.panel != nil }
+    var isShowing: Bool {
+        self.panel != nil
+    }
 
     func show(on screen: NSScreen) {
         let leftWidth = screen.auxiliaryTopLeftArea?.width ?? 0
@@ -154,7 +166,11 @@ final class NotchPanelController {
         self.state.notchHeight = screen.safeAreaInsets.top
         let width = max(self.state.collapsedWidth, NotchState.expandedWidth) + NotchState.flare * 2 + 40
         let height = self.state.notchHeight + Self.panelContentHeight
-        let frame = NSRect(x: screen.frame.midX - width / 2, y: screen.frame.maxY - height, width: width, height: height)
+        let frame = NSRect(
+            x: screen.frame.midX - width / 2,
+            y: screen.frame.maxY - height,
+            width: width,
+            height: height)
         let panel = self.panel ?? self.makePanel(frame: frame)
         panel.setFrame(frame, display: true)
         panel.ignoresMouseEvents = !self.state.isExpanded
@@ -181,8 +197,13 @@ final class NotchPanelController {
     }
 
     private func makePanel(frame: NSRect) -> GlancePanel {
-        let panel = GlancePanel(contentRect: frame, level: NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 3))
-        let host = FirstClickHostingView(rootView: NotchRootView(feed: self.feed, state: self.state, actions: self.actions))
+        let panel = GlancePanel(
+            contentRect: frame,
+            level: NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 3))
+        let host = FirstClickHostingView(rootView: NotchRootView(
+            feed: self.feed,
+            state: self.state,
+            actions: self.actions))
         host.sizingOptions = []
         panel.contentView = host
         return panel
@@ -208,7 +229,11 @@ final class NotchPanelController {
         let size = CGSize(
             width: max(collapsed.width, self.state.visibleSize.width),
             height: max(collapsed.height, self.state.visibleSize.height))
-        let rect = NSRect(x: frame.midX - size.width / 2, y: frame.maxY - size.height, width: size.width, height: size.height)
+        let rect = NSRect(
+            x: frame.midX - size.width / 2,
+            y: frame.maxY - size.height,
+            width: size.width,
+            height: size.height)
         return rect.insetBy(dx: -8, dy: -8)
     }
 
