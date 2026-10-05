@@ -60,7 +60,9 @@ final class MenuBarGlanceController: NSObject {
         self.actions = actions
     }
 
-    var isShowing: Bool { self.statusItem != nil }
+    var isShowing: Bool {
+        self.statusItem != nil
+    }
 
     func show() {
         guard self.statusItem == nil else { return }
@@ -143,7 +145,10 @@ final class MenuBarGlanceController: NSObject {
             panel.animator().alphaValue = 1
         }
         self.dropdown = panel
-        self.dismissMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+        self.dismissMonitor = NSEvent.addGlobalMonitorForEvents(matching: [
+            .leftMouseDown,
+            .rightMouseDown,
+        ]) { [weak self] _ in
             MainActor.assumeIsolated { self?.closeDropdown() }
         }
     }

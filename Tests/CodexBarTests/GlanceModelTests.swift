@@ -5,8 +5,20 @@ import Testing
 struct GlanceModelTests {
     @Test
     func `used and remaining display styles project to the same remaining quota and pace`() {
-        let used = GlanceLane(id: "weekly", title: "Weekly", percent: 12, showsUsed: true, pacePercent: 27, resetText: nil)
-        let left = GlanceLane(id: "weekly", title: "Weekly", percent: 88, showsUsed: false, pacePercent: 73, resetText: nil)
+        let used = GlanceLane(
+            id: "weekly",
+            title: "Weekly",
+            percent: 12,
+            showsUsed: true,
+            pacePercent: 27,
+            resetText: nil)
+        let left = GlanceLane(
+            id: "weekly",
+            title: "Weekly",
+            percent: 88,
+            showsUsed: false,
+            pacePercent: 73,
+            resetText: nil)
         #expect(used == left)
         #expect(used.remaining == 88)
         #expect(used.expectedRemaining == 73)
@@ -18,8 +30,20 @@ struct GlanceModelTests {
             provider: .claude,
             name: "Claude",
             lanes: [
-                GlanceLane(id: "primary", title: "Session", percent: 100, showsUsed: false, pacePercent: nil, resetText: nil),
-                GlanceLane(id: "secondary", title: "Weekly", percent: 79, showsUsed: false, pacePercent: 9, resetText: nil),
+                GlanceLane(
+                    id: "primary",
+                    title: "Session",
+                    percent: 100,
+                    showsUsed: false,
+                    pacePercent: nil,
+                    resetText: nil),
+                GlanceLane(
+                    id: "secondary",
+                    title: "Weekly",
+                    percent: 79,
+                    showsUsed: false,
+                    pacePercent: 9,
+                    resetText: nil),
             ],
             freshness: .live)
         #expect(provider.binding?.id == "secondary")
@@ -42,12 +66,30 @@ struct GlanceModelTests {
             provider: .claude,
             name: "Claude",
             lanes: [
-                GlanceLane(id: "secondary", title: "Weekly", percent: 77, showsUsed: false,
-                           pacePercent: nil, resetText: "14h 17m", windowMinutes: 10080),
-                GlanceLane(id: "claude-weekly-scoped-fable", title: "Fable weekly", percent: 90, showsUsed: false,
-                           pacePercent: nil, resetText: nil, windowMinutes: 10080),
-                GlanceLane(id: "primary", title: "Session", percent: 92, showsUsed: false,
-                           pacePercent: nil, resetText: "4h 7m", windowMinutes: 300),
+                GlanceLane(
+                    id: "secondary",
+                    title: "Weekly",
+                    percent: 77,
+                    showsUsed: false,
+                    pacePercent: nil,
+                    resetText: "14h 17m",
+                    windowMinutes: 10080),
+                GlanceLane(
+                    id: "claude-weekly-scoped-fable",
+                    title: "Fable weekly",
+                    percent: 90,
+                    showsUsed: false,
+                    pacePercent: nil,
+                    resetText: nil,
+                    windowMinutes: 10080),
+                GlanceLane(
+                    id: "primary",
+                    title: "Session",
+                    percent: 92,
+                    showsUsed: false,
+                    pacePercent: nil,
+                    resetText: "4h 7m",
+                    windowMinutes: 300),
             ],
             freshness: .live)
         #expect(provider.lanes.map(\.label) == ["5h", "7d", "7d fable"])
@@ -56,10 +98,22 @@ struct GlanceModelTests {
 
     @Test
     func `missing window length falls back to the title`() {
-        let weekly = GlanceLane(id: "primary", title: "Weekly", percent: 88, showsUsed: false,
-                                pacePercent: nil, resetText: nil, windowMinutes: nil)
-        let unknown = GlanceLane(id: "credits", title: "Credits", percent: 50, showsUsed: false,
-                                 pacePercent: nil, resetText: nil, windowMinutes: nil)
+        let weekly = GlanceLane(
+            id: "primary",
+            title: "Weekly",
+            percent: 88,
+            showsUsed: false,
+            pacePercent: nil,
+            resetText: nil,
+            windowMinutes: nil)
+        let unknown = GlanceLane(
+            id: "credits",
+            title: "Credits",
+            percent: 50,
+            showsUsed: false,
+            pacePercent: nil,
+            resetText: nil,
+            windowMinutes: nil)
         #expect(weekly.label == "7d")
         #expect(unknown.label == "credits")
     }

@@ -522,8 +522,8 @@ enum CostUsageClaudeCacheIO {
     }
 }
 
-// Glance fork seam: presentations that refresh cost history rarely can drop the decoded Claude artifacts between
-// scans. Both memos rebuild from their on-disk artifacts on the next scan.
+/// Glance fork seam: presentations that refresh cost history rarely can drop the decoded Claude artifacts between
+/// scans. Both memos rebuild from their on-disk artifacts on the next scan.
 public enum CostUsageMemoryRelease {
     public static func releaseClaudeArtifacts() {
         CostUsageClaudeCacheIO.releaseArtifactMemo()

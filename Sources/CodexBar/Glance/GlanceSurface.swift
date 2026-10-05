@@ -7,7 +7,9 @@ enum GlanceSurface: String, CaseIterable, Identifiable {
 
     static let defaultsKey = "glanceSurface"
 
-    var id: String { self.rawValue }
+    var id: String {
+        self.rawValue
+    }
 
     var title: String {
         switch self {
@@ -35,6 +37,7 @@ final class GlanceSurfaceObserver: NSObject {
         UserDefaults.standard.removeObserver(self, forKeyPath: GlanceSurface.defaultsKey)
     }
 
+    // swiftlint:disable:next block_based_kvo
     override func observeValue(
         forKeyPath _: String?,
         of _: Any?,
