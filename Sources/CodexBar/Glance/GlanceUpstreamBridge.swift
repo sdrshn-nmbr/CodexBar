@@ -38,7 +38,7 @@ final class GlanceController: StatusItemControlling {
     {
         StatusItemController.hidesStatusItems = true
         GlanceSettingsTheme.isActive = ProcessInfo.processInfo.environment["CODEXBAR_GLANCE_SETTINGS_THEME"] != "0"
-        UsageStore.minimumTokenFetchTTL = Self.costHistoryInterval
+        UsageStore.minimumTokenFetchTTL = self.costHistoryInterval
         let legacy = StatusItemController(
             store: store,
             settings: settings,
@@ -110,7 +110,8 @@ final class GlanceController: StatusItemControlling {
                 "general": .general, "usageSpend": .usageSpend, "notifications": .notifications,
                 "menuBar": .menuBar, "menu": .menu, "advanced": .advanced, "about": .about,
             ]
-            let pane = named[requested] ?? UsageProvider(rawValue: requested).map { SettingsPane.provider($0.instanceID) }
+            let pane = named[requested] ?? UsageProvider(rawValue: requested)
+                .map { SettingsPane.provider($0.instanceID) }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { handler(pane) }
         }
         self.legacy.setSettingsOpenHandler(handler)

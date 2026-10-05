@@ -18,9 +18,9 @@ enum GlanceStyle {
 
     static func tint(_ severity: GlanceSeverity) -> Color {
         switch severity {
-        case .calm: primary
-        case .watch: amber
-        case .low: ember
+        case .calm: self.primary
+        case .watch: self.amber
+        case .low: self.ember
         }
     }
 
