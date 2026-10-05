@@ -81,8 +81,7 @@ struct NotchRootView: View {
             .padding(.horizontal, NotchState.flare)
             .background(
                 NotchShape(bottomRadius: expanded ? 24 : 10, flare: NotchState.flare)
-                    .fill(GlanceStyle.ink)
-                    .shadow(color: .black.opacity(expanded ? 0.45 : 0), radius: 18, y: 8))
+                    .fill(GlanceStyle.ink))
             // The hover hit area follows the drawn body, including mid-animation sizes.
             .onGeometryChange(for: CGSize.self) { proxy in
                 proxy.size
