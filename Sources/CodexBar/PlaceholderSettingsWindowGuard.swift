@@ -37,7 +37,9 @@ final class PlaceholderSettingsWindowGuard {
         windows: @escaping WindowsProvider = { NSApp?.windows ?? [] },
         isKnownSettingsWindow: @escaping WindowPredicate = { _ in false },
         isVisible: @escaping WindowPredicate = { $0.isVisible },
-        closeWindow: @escaping WindowAction = { $0.close() })
+        // Sweeps run inside window notifications, some posted while AppKit is still ordering the placeholder
+        // in. A close there is lost and leaves a window every later close() ignores, so close on the next turn.
+        closeWindow: @escaping WindowAction = { window in DispatchQueue.main.async { window.close() } })
     {
         self.windows = windows
         self.isKnownSettingsWindow = isKnownSettingsWindow
