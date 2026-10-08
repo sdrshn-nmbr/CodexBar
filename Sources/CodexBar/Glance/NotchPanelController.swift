@@ -10,17 +10,24 @@ final class NotchState {
     var notchWidth: CGFloat = 180
     var notchHeight: CGFloat = 32
     var visibleSize: CGSize = .zero
+    var columns = 2
 
     static let earWidth: CGFloat = 50
     static let flare: CGFloat = 7
-    static let expandedWidth: CGFloat = 372
+    /// Each provider column gets the same share of the card, so a third provider widens the card instead of
+    /// squeezing every column until its numbers wrap.
+    static let columnWidth: CGFloat = 186
 
     var collapsedWidth: CGFloat {
         self.notchWidth + Self.earWidth * 2
     }
 
+    var expandedWidth: CGFloat {
+        max(self.collapsedWidth, Self.columnWidth * CGFloat(max(self.columns, 2)))
+    }
+
     var bodyWidth: CGFloat {
-        self.isExpanded ? max(self.collapsedWidth, Self.expandedWidth) : self.collapsedWidth
+        self.isExpanded ? self.expandedWidth : self.collapsedWidth
     }
 }
 
@@ -135,6 +142,7 @@ final class NotchPanelController {
     private let actions: GlanceActions
     private let state = NotchState()
     private var panel: GlancePanel?
+    private var screen: NSScreen?
     private var monitors: [Any] = []
     /// While expanded the panel receives the pointer, so AppKit stops delivering move events to the global monitor.
     /// Collapse is decided by sampling the pointer instead.
@@ -163,13 +171,9 @@ final class NotchPanelController {
         let rightWidth = screen.auxiliaryTopRightArea?.width ?? 0
         self.state.notchWidth = max(80, screen.frame.width - leftWidth - rightWidth)
         self.state.notchHeight = screen.safeAreaInsets.top
-        let width = max(self.state.collapsedWidth, NotchState.expandedWidth) + NotchState.flare * 2 + 40
-        let height = self.state.notchHeight + Self.panelContentHeight
-        let frame = NSRect(
-            x: screen.frame.midX - width / 2,
-            y: screen.frame.maxY - height,
-            width: width,
-            height: height)
+        self.state.columns = self.feed.snapshot.providers.count
+        self.screen = screen
+        let frame = self.panelFrame(on: screen)
         let panel = self.panel ?? self.makePanel(frame: frame)
         panel.setFrame(frame, display: true)
         panel.ignoresMouseEvents = !self.state.isExpanded
@@ -187,6 +191,7 @@ final class NotchPanelController {
         self.removeMonitors()
         self.panel?.orderOut(nil)
         self.panel = nil
+        self.screen = nil
         self.state.isExpanded = false
     }
 
@@ -208,8 +213,26 @@ final class NotchPanelController {
         return panel
     }
 
+    /// The panel stays transparent around the drawn body; it only needs to fit the widest expanded card.
+    private func panelFrame(on screen: NSScreen) -> NSRect {
+        let width = self.state.expandedWidth + NotchState.flare * 2 + 40
+        let height = self.state.notchHeight + Self.panelContentHeight
+        return NSRect(
+            x: screen.frame.midX - width / 2,
+            y: screen.frame.maxY - height,
+            width: width,
+            height: height)
+    }
+
     private func setExpanded(_ expanded: Bool, armedByPointer: Bool = true) {
         guard self.state.isExpanded != expanded else { return }
+        if expanded, let panel, let screen {
+            self.state.columns = self.feed.snapshot.providers.count
+            let frame = self.panelFrame(on: screen)
+            if panel.frame != frame {
+                panel.setFrame(frame, display: true)
+            }
+        }
         self.state.isExpanded = expanded
         self.panel?.ignoresMouseEvents = !expanded
         if expanded {
