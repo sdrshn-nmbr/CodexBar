@@ -133,6 +133,8 @@ struct GlanceProviderColumn: View {
                         .font(GlanceStyle.label(10, weight: .semibold))
                         .tracking(1.4)
                         .foregroundStyle(GlanceStyle.secondary)
+                        .lineLimit(1)
+                        .fixedSize()
                 }
                 .buttonStyle(.plain)
                 .help("Open \(self.provider.name) settings")
@@ -191,6 +193,7 @@ struct GlanceStat: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline, spacing: 1) {
                 GlancePercent(value: self.lane.remaining, size: 26, color: GlanceStyle.tint(severity))
+                    .fixedSize()
                 if self.lane.isAheadOfPace, severity == .calm {
                     Circle()
                         .fill(GlanceStyle.amber)
