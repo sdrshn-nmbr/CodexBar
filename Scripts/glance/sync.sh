@@ -137,4 +137,3 @@ fi
 cp "$SRC/Scripts/glance/sync.sh" "$GLANCE_HOME/bin/sync.sh" 2>/dev/null || true
 version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_DEST/Contents/Info.plist")
 log "installed CodexBar $version (glance $(git rev-parse --short HEAD))"
-notify "Updated to CodexBar $version"
