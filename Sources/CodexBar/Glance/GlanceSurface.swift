@@ -21,6 +21,21 @@ enum GlanceSurface: String, CaseIterable, Identifiable {
     static var stored: GlanceSurface {
         UserDefaults.standard.string(forKey: self.defaultsKey).flatMap(GlanceSurface.init(rawValue:)) ?? .notch
     }
+
+    /// The surface the right-click menus offer to move to. A Mac without a notch display has nowhere to go.
+    @MainActor var switchTarget: GlanceSurface? {
+        switch self {
+        case .notch: .menuBar
+        case .menuBar: NotchPanelController.notchScreen() == nil ? nil : .notch
+        }
+    }
+
+    var showTitle: String {
+        switch self {
+        case .notch: "Show in Notch"
+        case .menuBar: "Show in Menu Bar"
+        }
+    }
 }
 
 /// Calls back when the stored surface changes, whether written by Settings or by `defaults write`.

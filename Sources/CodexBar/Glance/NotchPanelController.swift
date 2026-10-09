@@ -80,7 +80,7 @@ struct NotchRootView: View {
                 .frame(height: self.state.notchHeight)
                 .opacity(expanded ? 0 : 1)
                 if expanded {
-                    GlanceCard(snapshot: self.feed.snapshot, actions: self.actions)
+                    GlanceCard(snapshot: self.feed.snapshot, surface: .notch, actions: self.actions)
                         .transition(.opacity.combined(with: .offset(y: -8)))
                 }
             }

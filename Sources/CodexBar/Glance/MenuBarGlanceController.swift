@@ -31,7 +31,7 @@ private struct DropdownView: View {
     let actions: GlanceActions
 
     var body: some View {
-        GlanceCard(snapshot: self.feed.snapshot, actions: self.actions)
+        GlanceCard(snapshot: self.feed.snapshot, surface: .menuBar, actions: self.actions)
             .frame(width: 340)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -117,6 +117,10 @@ final class MenuBarGlanceController: NSObject {
     private func showContextMenu(from button: NSStatusBarButton) {
         let menu = NSMenu()
         menu.addItem(withTitle: "Refresh", action: #selector(self.menuRefresh), keyEquivalent: "r").target = self
+        if let target = GlanceSurface.menuBar.switchTarget {
+            menu.addItem(withTitle: target.showTitle, action: #selector(self.menuShowInNotch), keyEquivalent: "")
+                .target = self
+        }
         menu.addItem(withTitle: "Settings…", action: #selector(self.menuSettings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit CodexBar", action: #selector(self.menuQuit), keyEquivalent: "q").target = self
@@ -124,6 +128,7 @@ final class MenuBarGlanceController: NSObject {
     }
 
     @objc private func menuRefresh() { self.actions.refresh() }
+    @objc private func menuShowInNotch() { self.actions.show(.notch) }
     @objc private func menuSettings() { self.actions.openSettings() }
     @objc private func menuQuit() { self.actions.quit() }
 
@@ -165,6 +170,10 @@ final class MenuBarGlanceController: NSObject {
     private func dismissingActions() -> GlanceActions {
         GlanceActions(
             refresh: self.actions.refresh,
+            show: { [weak self] surface in
+                self?.closeDropdown()
+                self?.actions.show(surface)
+            },
             openSettings: { [weak self] in
                 self?.closeDropdown()
                 self?.actions.openSettings()
