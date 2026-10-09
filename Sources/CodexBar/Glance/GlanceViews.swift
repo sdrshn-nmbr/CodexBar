@@ -3,6 +3,7 @@ import SwiftUI
 
 struct GlanceActions {
     var refresh: @MainActor () -> Void
+    var show: @MainActor (GlanceSurface) -> Void
     var openSettings: @MainActor () -> Void
     var quit: @MainActor () -> Void
 }
@@ -86,6 +87,7 @@ struct GlancePercent: View {
 /// Expanded glance: one column per provider, one stat per quota window, split by a hairline.
 struct GlanceCard: View {
     let snapshot: GlanceSnapshot
+    let surface: GlanceSurface
     let actions: GlanceActions
 
     var body: some View {
@@ -114,6 +116,9 @@ struct GlanceCard: View {
         .contentShape(Rectangle())
         .contextMenu {
             Button("Refresh") { self.actions.refresh() }
+            if let target = self.surface.switchTarget {
+                Button(target.showTitle) { self.actions.show(target) }
+            }
             Button("Settings…") { self.actions.openSettings() }
             Divider()
             Button("Quit CodexBar") { self.actions.quit() }
