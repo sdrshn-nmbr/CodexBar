@@ -58,6 +58,13 @@ final class GlanceController: StatusItemControlling {
         self.memoryRelief.start()
         let actions = GlanceActions(
             refresh: { [weak legacy] in legacy?.refreshNow() },
+            // The surface observer re-places the glance. Deferred so the menu that offered the switch closes
+            // before its surface goes away.
+            show: { surface in
+                DispatchQueue.main.async {
+                    UserDefaults.standard.set(surface.rawValue, forKey: GlanceSurface.defaultsKey)
+                }
+            },
             // Glance panels never activate the app (the old NSMenu did implicitly). Without activation, Stage
             // Manager files the settings window into its side strip instead of bringing it forward.
             openSettings: { [weak self] in
