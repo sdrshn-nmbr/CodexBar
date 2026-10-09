@@ -11,6 +11,11 @@ public enum AppGroupSupport {
     public static let widgetSnapshotFilename = "widget-snapshot.json"
     public static let migrationVersion = 1
     public static let migrationVersionKey = "appGroupMigrationVersion"
+    /// A build signed without a team (a local fork) cannot own a team-prefixed group container. macOS treats every
+    /// access as reading another developer's app data and asks again on each launch, so such builds stay local.
+    /// Test runners keep the container path so its lookup logic stays covered.
+    private static let mayUseGroupContainer = TestProcessSafety.isRunning
+        || codeSignatureTeamID(bundleURL: Bundle.main.bundleURL) != nil
     private static let sharedDefaultsMigrationKeys = [
         "debugDisableKeychainAccess",
         "widgetSelectedProvider",
@@ -84,9 +89,10 @@ public enum AppGroupSupport {
         -> URL?
     {
         #if os(macOS)
-        fileManager.containerURL(forSecurityApplicationGroupIdentifier: self.currentGroupID(for: bundleID))
+        guard self.mayUseGroupContainer else { return nil }
+        return fileManager.containerURL(forSecurityApplicationGroupIdentifier: self.currentGroupID(for: bundleID))
         #else
-        nil
+        return nil
         #endif
     }
 
