@@ -44,6 +44,11 @@ final class CostUsageClaudeFragments: @unchecked Sendable {
         self.lock.withLock { self.entries.removeAll { $0.url == url } }
     }
 
+    /// Glance fork seam: drops every decoded shard; the next scan reloads them from disk.
+    func evictAll() {
+        self.lock.withLock { self.entries.removeAll() }
+    }
+
     func currentStamp(contentID: UUID, at url: URL) -> CostUsageClaudeFileStamp? {
         self.lock.withLock {
             guard let snapshot = self.entries.last(where: { $0.url == url })?.snapshot,

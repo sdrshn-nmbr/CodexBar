@@ -497,14 +497,8 @@ enum CostUsageClaudeCacheIO {
 /// scans. Both memos rebuild from their on-disk artifacts on the next scan.
 public enum CostUsageMemoryRelease {
     public static func releaseClaudeArtifacts() {
-        CostUsageClaudeCacheIO.releaseArtifactMemo()
+        CostUsageClaudeFragments.shared.evictAll()
         CostUsageClaudeReportMemo.shared.removeAllInMemory()
-    }
-}
-
-extension CostUsageClaudeCacheIO {
-    fileprivate static func releaseArtifactMemo() {
-        ArtifactMemo.shared.entries.removeAllObjects()
     }
 }
 
