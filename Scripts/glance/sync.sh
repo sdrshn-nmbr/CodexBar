@@ -17,9 +17,11 @@ FORK_URL="https://github.com/sdrshn-nmbr/CodexBar.git"
 UPSTREAM_URL="https://github.com/steipete/CodexBar.git"
 BRANCH="glance"
 CLI_LINK="$HOME/.local/bin/codexbar"
-# Stable local identity: macOS keys privacy grants and Keychain access to it, so they survive updates.
-# Ad-hoc signatures change every build and make macOS re-ask after each install.
-SIGN_IDENTITY="${GLANCE_SIGN_IDENTITY:-CodexBar Glance Local Signing}"
+# Team-signed identity: macOS keys Keychain approvals to the team ID, so they survive updates.
+# Builds signed without a team are pinned by their exact hash and re-prompt after every install.
+SIGN_IDENTITY="${GLANCE_SIGN_IDENTITY:-Apple Development: sudarshan.jnambiar@gmail.com (TNR59VY2FF)}"
+# The shared-folder entitlement must carry the signing team's ID.
+TEAM_ID="${GLANCE_TEAM_ID:-LB9U2WVB8T}"
 
 mkdir -p "$GLANCE_HOME"
 
@@ -80,19 +82,20 @@ xcodebuild -resolvePackageDependencies -project WidgetExtension/CodexBarWidgetEx
   -scheme CodexBarWidgetExtension -derivedDataPath .build/xcode-widget-extension-release \
   >"$GLANCE_HOME/last-resolve.log" 2>&1 \
   || fail "widget dependency refresh failed (see last-resolve.log)"
-CODEXBAR_SKIP_LAUNCH_SMOKE=1 ./Scripts/package_app.sh release >"$GLANCE_HOME/last-package.log" 2>&1 \
+if ! security find-identity -p codesigning -v | grep -q "\"$SIGN_IDENTITY\""; then
+  fail "signing identity '$SIGN_IDENTITY' not found"
+fi
+APP_TEAM_ID="$TEAM_ID" CODEXBAR_SKIP_LAUNCH_SMOKE=1 ./Scripts/package_app.sh release >"$GLANCE_HOME/last-package.log" 2>&1 \
   || fail "packaging failed (see last-package.log)"
 
-if security find-identity -p codesigning -v | grep -q "\"$SIGN_IDENTITY\""; then
-  log "signing with $SIGN_IDENTITY"
-  codesign --force --deep --sign "$SIGN_IDENTITY" --preserve-metadata=entitlements,flags,runtime \
-    --timestamp=none "$SRC/CodexBar.app" >"$GLANCE_HOME/last-sign.log" 2>&1 \
-    || fail "signing failed (see last-sign.log)"
-  codesign --verify --deep --strict "$SRC/CodexBar.app" >>"$GLANCE_HOME/last-sign.log" 2>&1 \
-    || fail "signature check failed (see last-sign.log)"
-else
-  log "WARNING: signing identity '$SIGN_IDENTITY' not found; installing ad-hoc build"
-fi
+log "signing with $SIGN_IDENTITY"
+codesign --force --deep --sign "$SIGN_IDENTITY" --preserve-metadata=entitlements,flags,runtime \
+  --timestamp=none "$SRC/CodexBar.app" >"$GLANCE_HOME/last-sign.log" 2>&1 \
+  || fail "signing failed (see last-sign.log)"
+codesign --verify --deep --strict "$SRC/CodexBar.app" >>"$GLANCE_HOME/last-sign.log" 2>&1 \
+  || fail "signature check failed (see last-sign.log)"
+signed_team=$(codesign -dv "$SRC/CodexBar.app" 2>&1 | sed -n 's/^TeamIdentifier=//p')
+[[ "$signed_team" == "$TEAM_ID" ]] || fail "signed team '$signed_team' does not match $TEAM_ID"
 
 log "installing to $APP_DEST"
 rm -rf "$GLANCE_HOME/previous"
