@@ -16,6 +16,7 @@ private struct MenuBarGlyph: View {
                 GlanceEar(
                     provider: provider,
                     numeralSize: 11,
+                    numeralFont: GlanceStyle.label(11),
                     ringDiameter: 11,
                     calm: Color.primary,
                     track: Color.primary.opacity(0.22))

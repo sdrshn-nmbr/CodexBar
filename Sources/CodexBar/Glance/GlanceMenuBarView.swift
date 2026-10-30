@@ -5,13 +5,13 @@ struct GlanceMenuBarView: View {
     let actions: GlanceActions
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             if self.feed.snapshot.providers.isEmpty {
                 Text(L("No providers selected"))
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 12)
             } else {
-                Grid(alignment: .topLeading, horizontalSpacing: 22, verticalSpacing: 18) {
+                Grid(alignment: .topLeading, horizontalSpacing: 20, verticalSpacing: 18) {
                     ForEach(
                         Array(stride(from: 0, to: self.feed.snapshot.providers.count, by: 2)),
                         id: \.self)
@@ -56,10 +56,10 @@ struct GlanceMenuBarView: View {
             }
             .font(.system(size: 11, weight: .medium))
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 14)
-        .padding(.bottom, 10)
-        .frame(width: self.feed.snapshot.providers.contains { $0.lanes.count > 1 } ? 352 : 288)
+        .padding(.horizontal, 12)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .frame(width: self.feed.snapshot.providers.contains { $0.lanes.count > 1 } ? 352 : 240)
         .font(.system(size: 12))
         .focusEffectDisabled()
     }
@@ -82,7 +82,7 @@ private struct MenuBarProvider: View {
     let openSettings: @MainActor () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 5) {
                 Button(self.provider.name, action: self.openSettings)
                     .buttonStyle(.plain)
@@ -131,7 +131,7 @@ private struct MenuBarQuota: View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(alignment: .firstTextBaseline, spacing: 1) {
                 Text(Int(self.lane.remaining.rounded()), format: .number)
-                    .font(.system(size: 30, weight: .medium).monospacedDigit())
+                    .font(GlanceStyle.label(30))
                     .contentTransition(.numericText(value: self.lane.remaining))
                 Text("%")
                     .font(.system(size: 13))

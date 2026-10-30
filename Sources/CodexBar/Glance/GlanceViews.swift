@@ -232,6 +232,7 @@ struct GlanceStat: View {
 struct GlanceEar: View {
     let provider: GlanceProvider?
     var numeralSize: CGFloat = 12
+    var numeralFont: Font?
     var ringDiameter: CGFloat = 12
     var calm: Color = GlanceStyle.primary
     var track: Color = GlanceStyle.track
@@ -248,7 +249,7 @@ struct GlanceEar: View {
                 track: self.track)
             if let binding = self.provider?.binding {
                 Text(String(Int(binding.remaining.rounded())))
-                    .font(GlanceStyle.numerals(self.numeralSize))
+                    .font(self.numeralFont ?? GlanceStyle.numerals(self.numeralSize))
                     .foregroundStyle(severity == .calm ? self.calm : GlanceStyle.tint(severity))
                     .contentTransition(.numericText(value: binding.remaining))
                     .animation(GlanceStyle.settle, value: binding.remaining)
