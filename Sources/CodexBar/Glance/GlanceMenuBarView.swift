@@ -59,7 +59,7 @@ struct GlanceMenuBarView: View {
         .padding(.horizontal, 14)
         .padding(.top, 14)
         .padding(.bottom, 10)
-        .frame(width: 352)
+        .frame(width: self.feed.snapshot.providers.contains { $0.lanes.count > 1 } ? 352 : 288)
         .font(.system(size: 12))
         .focusEffectDisabled()
     }
@@ -82,11 +82,11 @@ private struct MenuBarProvider: View {
     let openSettings: @MainActor () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 5) {
                 Button(self.provider.name, action: self.openSettings)
                     .buttonStyle(.plain)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12, weight: .medium))
                     .lineLimit(1)
                     .help("Open \(self.provider.name) settings")
                 Spacer(minLength: 0)
@@ -131,10 +131,10 @@ private struct MenuBarQuota: View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(alignment: .firstTextBaseline, spacing: 1) {
                 Text(Int(self.lane.remaining.rounded()), format: .number)
-                    .font(.system(size: 28, weight: .semibold, design: .rounded).monospacedDigit())
+                    .font(.system(size: 30, weight: .medium).monospacedDigit())
                     .contentTransition(.numericText(value: self.lane.remaining))
                 Text("%")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                 if self.lane.isAheadOfPace, GlanceSeverity(lane: self.lane) == .calm {
                     Circle().fill(.orange).frame(width: 4, height: 4)
