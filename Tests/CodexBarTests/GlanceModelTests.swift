@@ -1,8 +1,40 @@
 import CodexBarCore
+import Foundation
 import Testing
 @testable import CodexBar
 
 struct GlanceModelTests {
+    @Test
+    func `Claude without a session shows its weekly limit once`() throws {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let weekly = RateWindow(usedPercent: 18, windowMinutes: 10080, resetsAt: nil, resetDescription: nil)
+        for sessionMinutes in [300, 10080] {
+            let primary = sessionMinutes == 10080 ? weekly : RateWindow(
+                usedPercent: 20, windowMinutes: 300, resetsAt: nil, resetDescription: nil)
+            let snapshot = UsageSnapshot(primary: primary, secondary: weekly, updatedAt: now)
+            let model = try UsageMenuCardView.Model.make(.init(
+                provider: .claude,
+                metadata: #require(ProviderDefaults.metadata[.claude]),
+                snapshot: snapshot,
+                credits: nil,
+                creditsError: nil,
+                dashboardError: nil,
+                tokenSnapshot: nil,
+                tokenError: nil,
+                account: AccountInfo(email: nil, plan: "Claude Ultra"),
+                isRefreshing: false,
+                lastError: nil,
+                usageBarsShowUsed: false,
+                resetTimeDisplayStyle: .countdown,
+                tokenCostUsageEnabled: false,
+                showOptionalCreditsAndExtraUsage: true,
+                hidePersonalInfo: false,
+                now: now))
+            let glance = GlanceProvider(model: model, snapshot: snapshot, now: now)
+            #expect(glance.lanes.map(\.label) == (sessionMinutes == 300 ? ["5h", "7d"] : ["7d"]))
+        }
+    }
+
     @Test
     func `used and remaining display styles project to the same remaining quota and pace`() {
         let used = GlanceLane(

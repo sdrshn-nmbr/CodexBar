@@ -4,13 +4,26 @@ import Testing
 
 struct ClaudeOAuthProfileIdentityTests {
     @Test
+    func `profile decodes the current organization rate tier`() throws {
+        let data = Data("""
+        {"organization":{"rate_limit_tier":"default_claude_max_20x"}}
+        """.utf8)
+        let profile = try JSONDecoder().decode(OAuthProfileResponse.self, from: data)
+        #expect(ClaudePlan.oauthLoginMethod(rateLimitTier: profile.rateLimitTier) == "Claude Ultra")
+    }
+
+    @Test
     func `requested OAuth profile keeps its email in the published identity`() async throws {
         let snapshot = try await self.fetch { token in
             #expect(token == "fixture-oauth-token")
-            return OAuthProfileResponse(emailAddress: "oauth@example.com", organizationUuid: "fixture-org")
+            return OAuthProfileResponse(
+                emailAddress: "oauth@example.com",
+                organizationUuid: "fixture-org",
+                rateLimitTier: "default_claude_max_20x")
         }
         let published = ClaudeOAuthFetchStrategy._snapshotForTesting(from: snapshot)
         #expect(snapshot.accountEmail == "oauth@example.com")
+        #expect(snapshot.loginMethod == "Claude Ultra")
         #expect(published.identity?.accountEmail == "oauth@example.com")
         #expect(published.identity?.providerID == .claude)
         #expect(snapshot.accountID != nil)
@@ -42,7 +55,10 @@ struct ClaudeOAuthProfileIdentityTests {
         let calls = ProfileCalls()
         let profile: @Sendable (String) async throws -> OAuthProfileResponse = { token in
             await calls.append(token)
-            return OAuthProfileResponse(emailAddress: "oauth@example.com", organizationUuid: "fixture-org")
+            return OAuthProfileResponse(
+                emailAddress: "oauth@example.com",
+                organizationUuid: "fixture-org",
+                rateLimitTier: "default_claude_max_20x")
         }
         _ = try await self.fetch(includeAccountIdentity: false, cache: cache, profile: profile)
         await cache.finishPendingForTesting()
@@ -51,6 +67,7 @@ struct ClaudeOAuthProfileIdentityTests {
         #expect(snapshot.accountID == nil)
         #expect(snapshot.primary?.usedPercent == 17)
         #expect(await calls.tokens == ["fixture-oauth-token"])
+        #expect(snapshot.loginMethod == "Claude Ultra")
     }
 
     @Test

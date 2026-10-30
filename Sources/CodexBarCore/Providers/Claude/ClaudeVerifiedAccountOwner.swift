@@ -17,10 +17,15 @@ enum ClaudeVerifiedAccountOwner {
 }
 
 extension ClaudeUsageSnapshot {
-    func withAccountIdentity(_ accountID: String?, email: String? = nil) -> ClaudeUsageSnapshot {
+    func withAccountIdentity(
+        _ accountID: String?,
+        email: String? = nil,
+        loginMethod: String? = nil) -> ClaudeUsageSnapshot
+    {
         var snapshot = self
         snapshot.accountID = accountID
         snapshot.accountEmail = email ?? self.accountEmail
+        snapshot.loginMethod = loginMethod ?? self.loginMethod
         return snapshot
     }
 }

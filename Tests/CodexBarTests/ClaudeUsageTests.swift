@@ -794,7 +794,7 @@ struct ClaudeUsageTests {
         let data = Data(json.utf8)
         let info = ClaudeWebAPIFetcher._parseAccountInfoForTesting(data, orgId: "org-123")
         #expect(info?.email == "steipete@gmail.com")
-        #expect(info?.loginMethod == "Claude Max 20x")
+        #expect(info?.loginMethod == "Claude Ultra")
     }
 
     @Test
@@ -913,6 +913,23 @@ extension ClaudeUsageTests {
 }
 
 struct ClaudeOAuthUsageMappingTests {
+    @Test
+    func `Ultra keeps only the windows returned by the account`() throws {
+        for session in ["null", "{\"utilization\": 20}"] {
+            let json = """
+            {"five_hour": \(session), "seven_day": {"utilization": 18}}
+            """
+            let snapshot = try ClaudeUsageFetcher._mapOAuthUsageForTesting(
+                Data(json.utf8),
+                rateLimitTier: "default_claude_max_20x",
+                subscriptionType: "max")
+            #expect(snapshot.loginMethod == "Claude Ultra")
+            #expect(snapshot.primary?.windowMinutes == (session == "null" ? 7 * 24 * 60 : 5 * 60))
+            #expect(snapshot.primary?.usedPercent == (session == "null" ? 18 : 20))
+            #expect(snapshot.secondary?.usedPercent == 18)
+        }
+    }
+
     @Test
     func `oauth usage falls back to weekly window when five hour is absent`() throws {
         let json = """

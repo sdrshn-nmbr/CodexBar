@@ -142,8 +142,8 @@ public enum ClaudeProviderDescriptor {
                 usesAccountFallback: false,
                 sharePlanLabels: [
                     "free": "Free", "claude free": "Free", "pro": "Pro", "claude pro": "Pro",
-                    "max": "Max", "claude max": "Max", "max 5x": "Max 5x", "claude max 5x": "Max 5x",
-                    "max 20x": "Max 20x", "claude max 20x": "Max 20x", "team": "Team",
+                    "max": "Max", "claude max": "Max", "max 5x": "Max", "claude max 5x": "Max",
+                    "max 20x": "Ultra", "claude max 20x": "Ultra", "team": "Team",
                     "claude team": "Team", "claude team standard": "Team Standard",
                     "claude team premium": "Team Premium", "enterprise": "Enterprise",
                     "claude enterprise": "Enterprise", "ultra": "Ultra", "claude ultra": "Ultra",

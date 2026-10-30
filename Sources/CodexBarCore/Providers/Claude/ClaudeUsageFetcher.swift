@@ -20,7 +20,7 @@ public struct ClaudeUsageSnapshot: Sendable {
     /// Verified principal and organization from the same credential that produced this usage.
     public internal(set) var accountID: String?
     public internal(set) var subscriptionMetadata: ClaudeSubscriptionMetadata?
-    public let loginMethod: String?
+    public internal(set) var loginMethod: String?
     public let rawText: String?
     /// Present only when the credential used for this OAuth fetch matches the current Claude Keychain item.
     public let oauthKeychainPersistentRefHash: String?
@@ -438,7 +438,7 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
 
             try self.validateRequiredOAuthScope(credentials)
             if !self.fetcher.includeAccountIdentity {
-                _ = await ClaudeUsageFetcher.displayProfileCache.email(
+                _ = await ClaudeUsageFetcher.displayProfileCache.profile(
                     accessToken: credentials.accessToken, fetch: ClaudeUsageFetcher.fetchOAuthProfile)
             }
             let usage = try await ClaudeUsageFetcher.fetchOAuthUsage(
@@ -881,8 +881,12 @@ extension ClaudeUsageFetcher {
         accessToken: String) async throws -> ClaudeUsageSnapshot
     {
         guard self.includeAccountIdentity else {
-            return await snapshot.withAccountIdentity(snapshot.accountID, email: Self.displayProfileCache.email(
-                accessToken: accessToken, fetch: Self.fetchOAuthProfile))
+            let profile = await Self.displayProfileCache.profile(
+                accessToken: accessToken, fetch: Self.fetchOAuthProfile)
+            return snapshot.withAccountIdentity(
+                snapshot.accountID,
+                email: profile?.emailAddress,
+                loginMethod: ClaudePlan.oauthLoginMethod(rateLimitTier: profile?.rateLimitTier))
         }
         do {
             let profile = try await Self.fetchOAuthProfile(accessToken: accessToken)
@@ -891,7 +895,10 @@ extension ClaudeUsageFetcher {
                 accountUUID: profile.accountUuid,
                 email: profile.emailAddress,
                 organizationUUID: profile.organizationUuid)
-            return snapshot.withAccountIdentity(owner, email: profile.emailAddress)
+            return snapshot.withAccountIdentity(
+                owner,
+                email: profile.emailAddress,
+                loginMethod: ClaudePlan.oauthLoginMethod(rateLimitTier: profile.rateLimitTier))
         } catch {
             try Task.checkCancellation()
             if ClaudeOAuthFetchError.isCancellation(error) { throw error }

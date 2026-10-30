@@ -22,14 +22,6 @@ public enum ClaudePlan: String, CaseIterable, Sendable {
         }
     }
 
-    /// Branded label including the Max usage multiplier when the rate-limit tier carries one.
-    public func brandedLoginMethod(rateLimitTier: String?) -> String {
-        guard self == .max, let multiplier = Self.maxUsageMultiplier(rateLimitTier: rateLimitTier) else {
-            return self.brandedLoginMethod
-        }
-        return "\(self.brandedLoginMethod) \(multiplier)"
-    }
-
     public var compactLoginMethod: String {
         switch self {
         case .max:
@@ -59,8 +51,12 @@ public enum ClaudePlan: String, CaseIterable, Sendable {
     }
 
     public static func fromOAuthCredentials(subscriptionType: String?, rateLimitTier: String?) -> Self? {
-        self.fromCompatibilityLoginMethod(subscriptionType)
-            ?? self.fromOAuthRateLimitTier(rateLimitTier)
+        let subscription = self.fromCompatibilityLoginMethod(subscriptionType)
+        let tier = self.fromOAuthRateLimitTier(rateLimitTier)
+        if subscription == .max, tier == .ultra {
+            return .ultra
+        }
+        return subscription ?? tier
     }
 
     public static func fromWebAccount(rateLimitTier: String?, billingType: String?) -> Self? {
@@ -81,6 +77,9 @@ public enum ClaudePlan: String, CaseIterable, Sendable {
         if words.isEmpty {
             return nil
         }
+        if words.contains("ultra") || Self.maxUsageMultiplier(rateLimitTier: loginMethod) == "20x" {
+            return .ultra
+        }
         if words.contains("max") {
             return .max
         }
@@ -93,32 +92,29 @@ public enum ClaudePlan: String, CaseIterable, Sendable {
         if words.contains("enterprise") {
             return .enterprise
         }
-        if words.contains("ultra") {
-            return .ultra
-        }
         return nil
     }
 
     public static func oauthLoginMethod(rateLimitTier: String?) -> String? {
-        self.fromOAuthRateLimitTier(rateLimitTier)?.brandedLoginMethod(rateLimitTier: rateLimitTier)
+        self.fromOAuthRateLimitTier(rateLimitTier)?.brandedLoginMethod
     }
 
     public static func oauthLoginMethod(subscriptionType: String?, rateLimitTier: String?) -> String? {
         self.fromOAuthCredentials(
             subscriptionType: subscriptionType,
-            rateLimitTier: rateLimitTier)?.brandedLoginMethod(rateLimitTier: rateLimitTier)
+            rateLimitTier: rateLimitTier)?.brandedLoginMethod
     }
 
     public static func webLoginMethod(rateLimitTier: String?, billingType: String?) -> String? {
         self.fromWebAccount(
             rateLimitTier: rateLimitTier,
-            billingType: billingType)?.brandedLoginMethod(rateLimitTier: rateLimitTier)
+            billingType: billingType)?.brandedLoginMethod
     }
 
     public static func webLoginMethod(rateLimitTier: String?, billingType: String?, seatTier: String?) -> String? {
         let plan = self.fromWebAccount(rateLimitTier: rateLimitTier, billingType: billingType)
         if let plan, plan != .team {
-            return plan.brandedLoginMethod(rateLimitTier: rateLimitTier)
+            return plan.brandedLoginMethod
         }
 
         return switch self.normalized(seatTier) {
@@ -127,7 +123,7 @@ public enum ClaudePlan: String, CaseIterable, Sendable {
         case "team_tier_1":
             "Claude Team Premium"
         default:
-            plan?.brandedLoginMethod(rateLimitTier: rateLimitTier)
+            plan?.brandedLoginMethod
         }
     }
 
@@ -151,6 +147,9 @@ public enum ClaudePlan: String, CaseIterable, Sendable {
 
     private static func fromRateLimitTier(_ rateLimitTier: String?) -> Self? {
         let tier = Self.normalized(rateLimitTier)
+        if tier.contains("ultra") || Self.maxUsageMultiplier(rateLimitTier: rateLimitTier) == "20x" {
+            return .ultra
+        }
         if tier.contains("max") {
             return .max
         }

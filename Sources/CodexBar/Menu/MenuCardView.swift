@@ -1234,7 +1234,10 @@ extension UsageMenuCardView.Model {
                 input: input,
                 projection: codexProjection,
                 percentStyle: percentStyle))
-        } else if let primary = snapshot.primary?.measured {
+        } else if let primary = snapshot.primary?.measured,
+                  !(input.provider == .claude && primary.windowMinutes == 7 * 24 * 60
+                      && primary == snapshot.secondary)
+        {
             metrics.append(Self.primaryMetric(
                 input: input,
                 primary: primary,

@@ -228,6 +228,7 @@ struct OAuthProfileResponse: Decodable, Sendable {
     let accountUuid: String?
     let emailAddress: String?
     let organizationUuid: String?
+    let rateLimitTier: String?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: DynamicCodingKey.self)
@@ -241,12 +242,21 @@ struct OAuthProfileResponse: Decodable, Sendable {
         self.organizationUuid =
             organization.flatMap { Self.decodeString(in: $0, keys: ["uuid"]) }
                 ?? Self.decodeString(in: container, keys: ["organizationUuid", "organization_uuid"])
+        self.rateLimitTier = organization.flatMap {
+            Self.decodeString(in: $0, keys: ["rate_limit_tier", "rateLimitTier"])
+        }
     }
 
-    init(emailAddress: String?, organizationUuid: String?, accountUuid: String? = nil) {
+    init(
+        emailAddress: String?,
+        organizationUuid: String?,
+        accountUuid: String? = nil,
+        rateLimitTier: String? = nil)
+    {
         self.accountUuid = accountUuid
         self.emailAddress = emailAddress
         self.organizationUuid = organizationUuid
+        self.rateLimitTier = rateLimitTier
     }
 
     private static func decodeString(

@@ -8,23 +8,22 @@ struct ClaudePlanResolverTests {
         #expect(ClaudePlan.oauthLoginMethod(rateLimitTier: "claude_pro") == "Claude Pro")
         #expect(ClaudePlan.oauthLoginMethod(rateLimitTier: "claude_team") == "Claude Team")
         #expect(ClaudePlan.oauthLoginMethod(rateLimitTier: "claude_enterprise") == "Claude Enterprise")
+        #expect(ClaudePlan.oauthLoginMethod(rateLimitTier: "claude_ultra") == "Claude Ultra")
     }
 
     @Test
-    func `oauth rate limit tier preserves the Max usage multiplier`() {
-        #expect(ClaudePlan.oauthLoginMethod(rateLimitTier: "default_claude_max_5x") == "Claude Max 5x")
-        #expect(ClaudePlan.oauthLoginMethod(rateLimitTier: "default_claude_max_20x") == "Claude Max 20x")
-        #expect(ClaudePlan.oauthLoginMethod(rateLimitTier: "v2_default_claude_max_20x") == "Claude Max 20x")
-        // A bare Max tier without a multiplier keeps the plain label.
+    func `rate limit tiers use current Max and Ultra names`() {
+        #expect(ClaudePlan.oauthLoginMethod(rateLimitTier: "default_claude_max_5x") == "Claude Max")
+        #expect(ClaudePlan.oauthLoginMethod(rateLimitTier: "default_claude_max_20x") == "Claude Ultra")
+        #expect(ClaudePlan.oauthLoginMethod(rateLimitTier: "v2_default_claude_max_20x") == "Claude Ultra")
         #expect(ClaudePlan.oauthLoginMethod(rateLimitTier: "claude_max") == "Claude Max")
         #expect(ClaudePlan.oauthLoginMethod(rateLimitTier: "default_claude_team_5x") == "Claude Team")
-        // A resolved non-Max plan never inherits a Max multiplier from a disagreeing tier.
         #expect(
             ClaudePlan.oauthLoginMethod(subscriptionType: "team", rateLimitTier: "default_claude_max_5x")
                 == "Claude Team")
         #expect(
             ClaudePlan.webLoginMethod(rateLimitTier: "default_claude_max_20x", billingType: nil)
-                == "Claude Max 20x")
+                == "Claude Ultra")
     }
 
     @Test
@@ -36,6 +35,15 @@ struct ClaudePlanResolverTests {
             ClaudePlan.oauthLoginMethod(subscriptionType: "team", rateLimitTier: "default_claude_max_5x")
                 == "Claude Team")
         #expect(ClaudePlan.oauthLoginMethod(subscriptionType: nil, rateLimitTier: "default_claude_ai") == nil)
+        #expect(
+            ClaudePlan.oauthLoginMethod(subscriptionType: "max", rateLimitTier: "default_claude_max_20x")
+                == "Claude Ultra")
+        #expect(
+            ClaudePlan.oauthLoginMethod(subscriptionType: "ultra", rateLimitTier: "default_claude_max_20x")
+                == "Claude Ultra")
+        #expect(
+            ClaudePlan.oauthLoginMethod(subscriptionType: "team", rateLimitTier: "default_claude_max_20x")
+                == "Claude Team")
     }
 
     @Test
@@ -108,7 +116,7 @@ struct ClaudePlanResolverTests {
                 rateLimitTier: "default_claude_max_20x",
                 billingType: nil,
                 seatTier: nil)
-                == "Claude Max 20x")
+                == "Claude Ultra")
         #expect(
             ClaudePlan.webLoginMethod(
                 rateLimitTier: "claude_pro",
@@ -129,6 +137,8 @@ struct ClaudePlanResolverTests {
         #expect(ClaudePlan.fromCompatibilityLoginMethod("Max") == .max)
         #expect(ClaudePlan.fromCompatibilityLoginMethod("Claude Pro") == .pro)
         #expect(ClaudePlan.fromCompatibilityLoginMethod("Ultra") == .ultra)
+        #expect(ClaudePlan.fromCompatibilityLoginMethod("Claude Max 20x") == .ultra)
+        #expect(ClaudePlan.fromCompatibilityLoginMethod("Claude Max 5x") == .max)
         #expect(ClaudePlan.fromCompatibilityLoginMethod("Claude Team") == .team)
         #expect(ClaudePlan.fromCompatibilityLoginMethod("Claude Enterprise") == .enterprise)
     }
