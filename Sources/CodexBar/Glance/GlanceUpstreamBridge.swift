@@ -171,8 +171,15 @@ extension GlanceProvider {
     /// Older than this, the header shows the data's age. Claude's CLI is re-run at most every 15 minutes.
     static let showAgeAfter: TimeInterval = 5 * 60
 
-    init(model: UsageMenuCardView.Model, snapshot: UsageSnapshot?, now: Date) {
-        let lanes = model.metrics.map { GlanceLane(metric: $0, snapshot: snapshot) }
+    init(
+        model: UsageMenuCardView.Model,
+        snapshot: UsageSnapshot?,
+        now: Date,
+        hideClaudeSession: Bool = false)
+    {
+        let lanes = model.metrics.map { GlanceLane(metric: $0, snapshot: snapshot) }.filter { lane in
+            !(hideClaudeSession && model.provider == .claude && lane.windowMinutes == 300)
+        }
         let age = snapshot.map { now.timeIntervalSince($0.updatedAt) }
         // Upstream keeps showing the last captured numbers when every source fails. The glance must never pass
         // those off as live, so anything past `staleAfter` is labeled with its age.
@@ -209,7 +216,8 @@ extension UsageStore {
             GlanceProvider(
                 model: self.menuCardModel(for: provider, context: .menu, now: now),
                 snapshot: self.presentationSnapshot(for: provider),
-                now: now)
+                now: now,
+                hideClaudeSession: UserDefaults.standard.bool(forKey: "glanceHideClaudeSession"))
         }
         return GlanceSnapshot(providers: providers)
     }

@@ -32,6 +32,9 @@ struct GlanceModelTests {
                 now: now))
             let glance = GlanceProvider(model: model, snapshot: snapshot, now: now)
             #expect(glance.lanes.map(\.label) == (sessionMinutes == 300 ? ["5h", "7d"] : ["7d"]))
+            let compact = GlanceProvider(model: model, snapshot: snapshot, now: now, hideClaudeSession: true)
+            #expect(compact.lanes.map(\.label) == ["7d"])
+            #expect(model.metrics.count == (sessionMinutes == 300 ? 2 : 1))
         }
     }
 

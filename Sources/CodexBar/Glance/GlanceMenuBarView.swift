@@ -5,7 +5,7 @@ struct GlanceMenuBarView: View {
     let actions: GlanceActions
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 10) {
             if self.feed.snapshot.providers.isEmpty {
                 Text(L("No providers selected"))
                     .foregroundStyle(.secondary)
@@ -27,17 +27,18 @@ struct GlanceMenuBarView: View {
             }
             HStack(spacing: 8) {
                 Button(action: self.actions.refresh) {
-                    Label(L("Refresh"), systemImage: "arrow.clockwise")
-                        .padding(.horizontal, 14)
-                        .frame(height: 32)
-                        .contentShape(Capsule())
+                    Image(systemName: "arrow.clockwise")
+                        .frame(width: 26, height: 26)
+                        .contentShape(Circle())
                 }
                 .modifier(MenuBarGlassControl())
+                .help(L("Refresh"))
+                .accessibilityLabel(L("Refresh"))
                 Spacer(minLength: 0)
                 if let target = GlanceSurface.menuBar.switchTarget {
                     Button { self.actions.show(target) } label: {
                         Image(systemName: "macbook")
-                            .frame(width: 32, height: 32)
+                            .frame(width: 26, height: 26)
                             .contentShape(Circle())
                     }
                     .modifier(MenuBarGlassControl())
@@ -46,16 +47,18 @@ struct GlanceMenuBarView: View {
                 }
                 Button(action: self.actions.openSettings) {
                     Image(systemName: "gearshape")
-                        .frame(width: 32, height: 32)
+                        .frame(width: 26, height: 26)
                         .contentShape(Circle())
                 }
                 .modifier(MenuBarGlassControl())
                 .help(L("Settings..."))
                 .accessibilityLabel(L("Settings..."))
             }
-            .font(.system(size: 12, weight: .medium))
+            .font(.system(size: 11, weight: .medium))
         }
-        .padding(14)
+        .padding(.horizontal, 14)
+        .padding(.top, 14)
+        .padding(.bottom, 10)
         .frame(width: 352)
         .font(.system(size: 12))
         .focusEffectDisabled()
